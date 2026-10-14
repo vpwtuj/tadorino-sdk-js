@@ -1,0 +1,58 @@
+name: SDK release
+on:
+  release:
+    types: [published]
+permissions:
+  contents: read
+concurrency:
+  group: sdk-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.event.release.prerelease == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - run: npm ci
+      - name: Match the immutable release tag and package version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: node -e 'const p=require("./package.json");if(process.env.RELEASE_TAG!==`v${p.version}`)throw Error("Release tag and package version must match")'
+      - run: npm run check
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run browser:check
+      - name: Publish using configured npm trusted publishing
+        # Initial package creation and the npm trusted publisher must be set up
+        # for this repository/workflow; no long-lived npm token is stored here.
+        run: npm publish --access public --provenance
+      - name: Generate matching versioned documentation after npm success
+        run: node scripts/prepare-pages.mjs
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: pages
+  documentation:
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy validated release documentation
+        id: deployment
+        uses: actions/deploy-pages@v5

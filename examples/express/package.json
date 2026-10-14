@@ -1,0 +1,14 @@
+{
+  "name": "@tadorino/example-express",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test example.test.js",
+    "check": "npm test"
+  },
+  "dependencies": {
+    "@bright203/tadorino-sdk-js": "file:../..",
+    "express": "5.3.0"
+  }
+}

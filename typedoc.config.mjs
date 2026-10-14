@@ -1,0 +1,17 @@
+export default {
+  name: 'Tadorino JavaScript SDK',
+  entryPoints: ['src/index.js'],
+  tsconfig: 'tsconfig.json',
+  readme: 'README.md',
+  projectDocuments: ['docs/guides/*.md'],
+  out: 'site',
+  excludeInternal: true,
+  excludePrivate: true,
+  excludeProtected: true,
+  includeVersion: true,
+  disableSources: true,
+  validation: { notExported: true, invalidLink: true, notDocumented: true },
+  requiredToBeDocumented: ['Class', 'Constructor', 'Property', 'Method', 'TypeAlias'],
+  treatWarningsAsErrors: true,
+  treatValidationWarningsAsErrors: true,
+};

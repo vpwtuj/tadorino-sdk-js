@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.docs/
+.types/
+.artifacts/
+*.tgz
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+playwright-report/
+test-results/
+site/
+pages/
