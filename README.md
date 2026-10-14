@@ -4,7 +4,7 @@
 
 ## 配布とサービス利用
 
-SDKのバージョンは **0.1.0** です。npmの配布名は`@bright203/tadorino-sdk-js`、文書は版ごとに管理します。タドリノの利用にはサービス側の利用許可と本人のAccess Tokenが必要です。パッケージの配布情報とサービスへの接続検証は、それぞれの記録を確認してください。
+SDKのバージョンは **0.1.0** です。npmの配布名は`@bright203/tadorino-sdk-js`、文書は版ごとに管理します。タドリノの利用にはサービス側の利用許可とAccess Tokenが必要です。本人sessionと登録済みの機械主体は、それぞれ別のメモ所有者として扱います。パッケージの配布情報とサービスへの接続検証は、それぞれの記録を確認してください。
 
 ## インストール
 
@@ -68,6 +68,12 @@ const { TadorinoClient, TadorinoError } = require('@bright203/tadorino-sdk-js');
 
 APIリファレンスは `src/index.js` のJavaScript＋JSDocからTypeDocで生成します。内部helper、MCP、管理RESTは公開SDKの入口に含みません。
 
+### 機械主体のソース変更（未公開）
+
+`examples/m2m` にReact＋Vite＋TypeScript → localhost Express → SDK → メモRESTの例を追加しています。Node専用のClient Credentials取得helperをバックエンドへ置き、ブラウザへClient Secretや機械のAccess Tokenを返しません。既存の本人OTP例・本人session例も維持しています。
+
+この例は公開済み0.1.0の `getAccessToken` と3操作だけで動作します。helperをSDKのexportや実行時依存へ追加していません。機械主体への対応はこのソース変更として検証し、npm0.1.0や版別Pagesへ新機能を公開済みとは扱いません。詳しい設定・制約はソースの `docs/guides/Machine-to-machine.md` を参照してください。
+
 ## 開発と検証
 
 Node.js 22.12以降の22系と24系を対象とします。
@@ -77,14 +83,14 @@ npm ci
 npm run check
 ```
 
-`check` はソースの型検査、ESM/CJS・型宣言の生成、TypeDocの説明・参照検査、Nodeテスト、React build、Expressの並行session、同じtarballを新規アプリへinstallした検証を実行します。掲載例は合成HTTP fixtureで実行し、実Auth0・実DB・実サービス接続の成功として扱いません。
+`check` はソースの型検査、ESM/CJS・型宣言の生成、TypeDocの説明・参照検査、Nodeテスト、React build、Expressの並行sessionと機械provider・安全なローカル入口、同じtarballを新規アプリへinstallした検証を実行します。機械例は公開npm0.1.0を新規installした互換検査も実行します。掲載例は合成HTTP fixtureで実行し、実Auth0・実DB・実サービス接続の成功として扱いません。
 
 ```sh
 npm run docs:build
 npm run docs:check
 npm run dev:vite
 node scripts/fixture-server.mjs
-# 独立したブラウザ検査（ループバックの5173/4010を使用）:
+# 独立したブラウザ検査（ループバックの5173/5174/5181/4010/4011を使用）:
 npx playwright install chromium firefox webkit
 npm run browser:check
 ```

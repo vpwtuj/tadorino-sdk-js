@@ -60,16 +60,16 @@ import { inputObject, noteId, origin, requestOptions, snapshot, timeout } from '
  * @property {AbortSignal} signal Cancellation notification for application token acquisition.
  */
 /**
- * Obtain the current user's Access Token once per operation. The application
+ * Obtain one user or registered machine's Access Token once per operation. The application
  * owns refresh, caching, session isolation, and login; late results after SDK
  * cancellation do not start an HTTP request.
- * @typedef {(context: TokenContext) => string|Promise<string>} GetAccessToken Obtain one user's Access Token; authentication and refresh belong to the application.
+ * @typedef {(context: TokenContext) => string|Promise<string>} GetAccessToken Obtain one principal's Access Token; authentication and renewal belong to the application.
  */
 /**
  * Shared browser/Node.js SDK configuration; authentication is application-owned.
  * @typedef {object} ClientOptions
  * @property {string} baseUrl HTTPS service origin only; explicit HTTP loopback is allowed for local tests.
- * @property {GetAccessToken} getAccessToken Callback bound to one user's session, called once per operation.
+ * @property {GetAccessToken} getAccessToken Callback bound to one user session or registered machine, called once per operation.
  * @property {typeof globalThis.fetch} [fetch] Standard Fetch implementation; defaults to globalThis.fetch.
  * @property {number} [timeoutMs] Default whole-operation deadline, 1–300000 ms; default 60000.
  */
@@ -81,10 +81,11 @@ import { inputObject, noteId, origin, requestOptions, snapshot, timeout } from '
  */
 
 /**
- * Save, search, and retrieve the authenticated user's memos through REST.
+ * Save, search, and retrieve the authenticated user or registered machine's memos through REST.
  * Authentication and refresh belong to the application. Each call obtains one
  * Access Token and sends one HTTP request; the SDK never retries automatically.
- * Use a client bound to one user's session for concurrent server requests.
+ * Bind each client to one principal. A machine acts as its own memo owner;
+ * the consuming backend must authorize its own frontend users and operations.
  */
 export class TadorinoClient {
   /** @type {string} */ #baseUrl;
@@ -123,7 +124,7 @@ export class TadorinoClient {
   }
 
   /**
-   * Search the current user's title/body, preserving the server's order.
+   * Search the current principal's title/body, preserving the server's order.
    * @param {SearchNotesInput} input Search terms and optional result limit.
    * @param {RequestOptions} [options] Cancellation and deadline override.
    * @returns {Promise<SearchNotesResult>} Matches, including an empty successful result.

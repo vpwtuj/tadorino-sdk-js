@@ -53,6 +53,14 @@ Node.js 22.12以降の22系・24系、Chrome・Firefox・Safariの直近2主要�
 
 ## 配布と文書の確認
 
+### 機械主体の追加例（未公開ソース）
+
+2026-10-15、追加したlocalhost React＋Vite＋TypeScript → Express → SDKの機械例を、Node.js 24.21.0で検査しました。SDK36件・本人Express4件に加え、機械providerと入口の検査、React build・型・TypeDoc・同一candidate tarballによる導入が成功しました。公開npm0.1.0を新規installした同じ機械例でも検査を実行し、既存 `getAccessToken` APIでの互換を確認しました。
+
+Chromium 156.0.8078.4・Playwright WebKit 27.2では、本人例と機械例の保存・同じキーの再送・検索・全文取得、HTTP失敗、取消の合成ブラウザ検査12件が成功しました。機械tokenがブラウザの要求に付かず、bootstrap応答がCSRF nonceとモードだけであることも確認しています。この追加変更のFirefox・Linux CIは、このローカル記録では未検証です。
+
+親プロジェクトでは、このPCのChromeで機械例の画面から実RS256 JWT検証・一時PostgreSQL schemaを経由する3操作と同一キー再送を確認しました。機械JWTはバックエンドへだけ注入しています。ローカル署名鍵・合成機械・一時DBによる検証であり、実Auth0 Client Credentialsや公開環境への接続成功は主張しません。実Safari・前の主要ブラウザ版、npm・版別Pagesへの追加機能公開も別の工程です。
+
 合成HTTP・ローカル実DB・公開開発サービスの各検証は、上記の環境と範囲で区別して記録します。npmの配布確認とGitHub Pagesの配置・閲覧確認も、それぞれの完了条件として扱います。
 
 対象版のnpm配布情報は[npm package](https://www.npmjs.com/package/@bright203/tadorino-sdk-js)、版別文書のURLは[0.1.0のドキュメント](https://vpwtuj.github.io/tadorino-sdk-js/v0.1.0/)です。公開完了の記録では、取得したtarballとタグの一致、新規利用アプリでの検査、Pagesの `version.json` とnpm版の一致を確認します。文書内のリンクやローカルbuildの成功だけを、公開済みの証拠にはしません。

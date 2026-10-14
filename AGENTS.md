@@ -14,7 +14,9 @@ owns its login, token storage and refresh. The SDK calls only the public memo AP
   A parent integration verifies its hash. Do not duplicate server/DB/Auth0 code.
 - Preserve original memo content and result order. Drop unknown response fields;
   reject unknown request fields. Never introduce implicit retries or new save keys.
-- Bind each access-token callback to one user. Never share mutable token state.
+- Bind each access-token callback to one user session or one registered machine.
+  Never share mutable identity state. Machine credentials stay on the backend;
+  the consuming application authorizes its own frontend users and operations.
 - Cancellation/deadlines cover token retrieval, request and response streaming.
 - Errors must not contain raw exceptions, tokens, memo content or arbitrary URLs.
 - Examples must retain the initial save key and payload on an uncertain result.

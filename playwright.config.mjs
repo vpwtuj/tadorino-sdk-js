@@ -14,5 +14,8 @@ export default defineConfig({
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
   ],
-  webServer: { command: 'node scripts/browser-fixture.mjs', url: 'http://127.0.0.1:5173', reuseExistingServer: false, timeout: 120_000 },
+  webServer: [
+    { command: 'node scripts/browser-fixture.mjs', url: 'http://127.0.0.1:5173', reuseExistingServer: false, timeout: 120_000 },
+    { command: 'node scripts/m2m-browser-fixture.mjs', url: 'http://127.0.0.1:5174', reuseExistingServer: false, timeout: 120_000 },
+  ],
 });
