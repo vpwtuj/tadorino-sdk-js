@@ -2,7 +2,7 @@
 
 SDKの `getAccessToken({ signal })` は各操作で一度呼ばれます。Access Tokenの発行、キャッシュ、refresh、OTP、callback、再ログインは利用アプリが担当します。SDKはtokenを保存せず、401で自動更新・再送しません。
 
-取得関数は、本人sessionまたは事前登録済みの機械主体のどちらか一つへ固定します。本人のメモと機械のメモは別の所有者です。機械のClient Credentials例はソースの `examples/m2m` とMachine-to-machineガイドに追加しています。この例は未公開ソースの変更で、公開済み0.1.0にもある `getAccessToken` だけを使います。
+取得関数は、本人sessionまたは事前登録済みの機械主体のどちらか一つへ固定します。本人のメモと機械のメモは別の所有者です。0.1.1のソースには `examples/m2m` とMachine-to-machineガイドを追加しています。この例は0.1.0からある `getAccessToken` だけを使い、SDKの公開APIは変わりません。Node専用helperはGitHubソースの例で、npmパッケージへ含めていません。
 
 ## ブラウザ
 

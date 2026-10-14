@@ -2,6 +2,8 @@
 
 このガイドはSDKの提供者向けです。npm公開・GitHub Pages公開・利用者の認証許可は別々に確認します。
 
+0.1.0は初回CLI公開済みです。0.1.1のソースは本人用SDK APIを維持し、機械主体の利用例と文書を追加します。次の公開では、下記のtrusted publisher設定と検証済みtarballの一致を確認し、新しい不変tag `v0.1.1` からRelease経路を使います。0.1.0のtag・npm配布物・版別Pagesを上書きしません。公開候補の検査だけでnpm公開済みとは扱いません。
+
 ## 初回のパッケージ公開
 
 まだnpmパッケージが存在しない初回は、所有者の2FAを有効にしたアカウントで、ログイン済みnpm CLIから検証済みtarballを公開します。CLIのログイン情報をリポジトリやログへ貼らず、長期の `NPM_TOKEN` をGitHub Secretsへ登録しません。
@@ -60,5 +62,7 @@ HTTP404・429・5xx・通信中断は待機期限内で再確認します。そ�
 設定の存在や `npm whoami` だけでtrusted publishing検証済みと報告せず、実際の新しい版のOIDC公開が成功した時点で確認します。
 
 以後の新しい安定版はversionを更新し、対応する `vX.Y.Z` タグのGitHub Releaseを公開します。workflowは検証済みtarballのSHAを照合して渡し、短期OIDC認証でnpmへ公開した後、対応版の文書を配置します。prereleaseはこの安定版経路では公開しません。
+
+0.1.1では、SDK checksのNode22/24と本人・機械の3ブラウザエンジン検査が成功したcommitをmainへ取り込み、その同じcommitへtagを作ります。npm側で直接 `npm publish` が許可されたtrusted publisherを確認してからGitHub Releaseを公開します。初のOIDC公開に失敗した場合は設定・期限・workflow名・repository URLを確認し、長期tokenへ切り替えたり既存の2FAを緩めたりしません。uploadが受理されていないことを確認できる場合だけpublish jobを再実行し、既に公開処理中・公開済みなら同じ版を再uploadせず、公開レジストリの確認と文書jobの復旧へ進みます。
 
 npm公開後に文書jobだけが失敗した場合は、失敗したjobの再実行か文書専用の手動実行で復旧します。同じnpm versionの再公開はできないため、初回手動公開済み `v0.1.0` に後からGitHub Releaseを作成して自動npm公開を起動しないでください。初回タグを保持し、次の新しい版からRelease経路を使います。

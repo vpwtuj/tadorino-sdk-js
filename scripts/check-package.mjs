@@ -15,7 +15,8 @@ const run = async (cmd, args, cwd) => (await execFileAsync(cmd, args, { cwd, enc
 try {
   const packed = JSON.parse(await run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', temporary], root))[0];
   assert.equal(packed.name, '@bright203/tadorino-sdk-js');
-  assert.equal(packed.version, '0.1.0');
+  const sourceManifest = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+  assert.equal(packed.version, sourceManifest.version);
   for (const { path: file } of packed.files) {
     assert(/^(?:package\.json|README\.md|LICENSE|dist\/index\.(?:js|cjs)|dist\/(?:esm\/[^/]+\.d\.ts|cjs\/[^/]+\.d\.cts))$/.test(file), `Unexpected package file: ${file}`);
   }
