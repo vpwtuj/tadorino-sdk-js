@@ -59,6 +59,8 @@ Node.js 22.12以降の22系・24系、Chrome・Firefox・Safariの直近2主要�
 
 Chromium 156.0.8078.4・Playwright WebKit 27.2では、本人例と機械例の保存・同じキーの再送・検索・全文取得、HTTP失敗、取消の合成ブラウザ検査12件が成功しました。機械tokenがブラウザの要求に付かず、bootstrap応答がCSRF nonceとモードだけであることも確認しています。このMacのFirefox6件はprofile folderが見つからず、ブラウザ起動前に失敗しました。成功・skipとして扱いません。Firefox・Linux CIの結果は、対象commitのGitHub Actionsで別途確認します。
 
+0.1.1準備commit `4e3ca38f920672844cf67425a6ce559bdee86772` の[SDK checks](https://github.com/vpwtuj/tadorino-sdk-js/actions/runs/38654929859)は成功しました。Node.js 22.23.3／24.21.0でSDK41件・本人Express4件・機械例20件、型・文書・build・配布検査を確認し、LinuxのChromium／Firefox／WebKitで本人例・機械例のブラウザ18件すべてが成功しました。このCIも合成HTTP fixtureの検証で、実Auth0・実DB・実Safariの成功を意味しません。
+
 親プロジェクトでは、このPCのChromeで機械例の画面から実RS256 JWT検証・一時PostgreSQL schemaを経由する3操作と同一キー再送を確認しました。機械JWTはバックエンドへだけ注入しています。ローカル署名鍵・合成機械・一時DBによる検証であり、実Auth0 Client Credentialsや公開環境への接続成功は主張しません。実Safari・前の主要ブラウザ版の確認、npm・版別Pagesへの配置も別の工程です。
 
 合成HTTP・ローカル実DB・公開開発サービスの各検証は、上記の環境と範囲で区別して記録します。npmの配布確認とGitHub Pagesの配置・閲覧確認も、それぞれの完了条件として扱います。
