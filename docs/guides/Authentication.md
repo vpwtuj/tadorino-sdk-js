@@ -7,6 +7,7 @@ SDKの `getAccessToken({ signal })` は各操作で一度呼ばれます。Acces
 [Auth0 React SDK](https://auth0.com/docs/libraries/auth0-react)の `Auth0Provider` と `getAccessTokenSilently` を使うReact例を用意しています。SPAはAuthorization Code＋PKCE、公開Client ID、HTTPS公開メモRESTのaudienceを設定します。Client Secret・Access Token・Refresh Tokenを `VITE_` の環境変数へ入れないでください。Viteの変数は配布JavaScriptへ入ります。
 
 Auth0設定にはSPA用clientの利用許可、正確なAllowed Callback URLs、Allowed Logout URLs、Allowed Web Origins、Refresh Token rotation等をアプリの更新方式に合わせて登録します。メモREST用CORSにも正確なアプリoriginが必要です。これらの外部設定・実OTP・公開REST接続は合成テストと別に検証します。
+タドリノのメールOTP接続は`email`です。React例はこのConnectionを指定し、Refresh Token rotationとmemory cacheを使います。Connection名を変える場合は`VITE_AUTH0_CONNECTION`で明示し、サービスの利用許可と同じユーザー識別になることを確認してください。
 
 メモ用Access Tokenはサービスのissuerと共通MCP_RESOURCE_URL audienceを使用します。保存に `notes:write`、検索・取得に `notes:read` を要求します。ID TokenやAuth0管理tokenを代用しません。
 

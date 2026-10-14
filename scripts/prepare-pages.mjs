@@ -24,6 +24,14 @@ if (!/^\d+\.\d+\.\d+$/.test(manifest.version) || !published(manifest.version)) {
   throw new Error('Publish this exact stable npm version before publishing its release documentation.');
 }
 const output = join(root, 'pages');
+const verifySite = async (directory, version) => {
+  const site = JSON.parse(await readFile(join(directory, 'site/version.json'), 'utf8'));
+  const pkg = JSON.parse(await readFile(join(directory, 'package.json'), 'utf8'));
+  if (pkg.name !== manifest.name || pkg.version !== version || site.package !== pkg.name || site.version !== version) {
+    throw new Error('Tag, package and generated documentation versions must match.');
+  }
+};
+await verifySite(root, manifest.version);
 await rm(output, { recursive: true, force: true });
 await mkdir(output);
 await cp(join(root, 'site'), join(output, `v${manifest.version}`), { recursive: true });
@@ -37,8 +45,11 @@ for (const tag of tags) {
   const checkout = join(temporary, 'sdk');
   try {
     run('git', ['worktree', 'add', '--detach', checkout, tag]);
+    const tagged = JSON.parse(await readFile(join(checkout, 'package.json'), 'utf8'));
+    if (tagged.name !== manifest.name || tagged.version !== tag.slice(1)) throw new Error('Historical release tag does not match its package.');
     run('npm', ['ci'], checkout);
     run('npm', ['run', 'docs:build'], checkout);
+    await verifySite(checkout, tag.slice(1));
     await cp(join(checkout, 'site'), join(output, tag), { recursive: true });
     versions.push(tag.slice(1));
   } finally {

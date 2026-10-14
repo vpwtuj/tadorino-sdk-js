@@ -26,7 +26,8 @@ if (!baseUrl || (demo && fixture) || (fixture && baseUrl !== 'http://127.0.0.1:3
   root.render(<StrictMode><App baseUrl={baseUrl} mode="synthetic" getAccessToken={async () => 'synthetic-example-token'} /></StrictMode>);
 } else {
   root.render(<StrictMode><Auth0Provider domain={domain!} clientId={clientId!}
-    authorizationParams={{ redirect_uri: window.location.origin, audience, scope: 'openid profile email notes:read notes:write' }}
+    authorizationParams={{ redirect_uri: window.location.origin, audience, scope: 'openid profile email notes:read notes:write',
+      connection: (import.meta.env.VITE_AUTH0_CONNECTION as string | undefined) ?? 'email' }}
     cacheLocation="memory" useRefreshTokens
     onRedirectCallback={() => window.history.replaceState({}, document.title, window.location.pathname)}>
     <AuthenticatedApp baseUrl={baseUrl} audience={audience!} />

@@ -63,6 +63,7 @@ const { TadorinoClient, TadorinoError } = require('@bright203/tadorino-sdk-js');
 - [保存の再送とエラー](https://github.com/vpwtuj/tadorino-sdk-js/blob/main/docs/guides/Errors-and-retries.md): 取消、期限、結果不明時の再送。
 - [React＋Vite＋TypeScript](https://github.com/vpwtuj/tadorino-sdk-js/blob/main/docs/guides/React-Vite.md): ブラウザからメモRESTへ接続する例。
 - [対応環境と検証状況](https://github.com/vpwtuj/tadorino-sdk-js/blob/main/docs/guides/Compatibility.md): 実際に確認した版と外部検証の範囲。
+- [公開手順](https://github.com/vpwtuj/tadorino-sdk-js/blob/main/docs/guides/Publishing.md): 初回CLI公開、版を固定した文書公開、以後のtrusted publishing。
 - [Express](https://github.com/vpwtuj/tadorino-sdk-js/blob/main/docs/guides/Express.md): アプリの本人sessionへSDKを組み込む例。
 
 APIリファレンスは `src/index.js` のJavaScript＋JSDocからTypeDocで生成します。内部helper、MCP、管理RESTは公開SDKの入口に含みません。
@@ -91,6 +92,12 @@ npm run browser:check
 生成HTMLは `site/`、配布コード・型宣言は `dist/` です。生成物を手で修正せず、Gitへ含めません。GitHub Pagesではリリースtagとnpm versionが一致した文書を、バージョン別に公開します。公開workflowは実際にnpmへ出ている版を確認してから配置します。
 
 SDKに実行時の外部依存はありません。React・Auth0・Express・文書生成ツールは例または開発用です。テストで確認した具体的なNode/ブラウザの版は対応環境ガイド・CI・公開時の検証記録に残します。Chromium/Firefox/WebKitの自動検査は実Safariと直近2主要版すべての確認を代替しません。
+
+## パッケージと文書の公開
+
+初回は検証済みtarballを所有者の2FA付きnpm CLIから公開し、次の新しい版を公開する直前にnpmのパッケージ設定で `vpwtuj/tadorino-sdk-js` の `release.yml` をtrusted publisherとして登録します。長期の `NPM_TOKEN` は使いません。
+
+初回版の文書は、公開済みnpm版と一致する `v0.1.0` タグを指定し、SDK release workflowの手動実行から配置できます。この操作は文書だけを生成・配置し、同じnpm版を再公開しません。以後は新しい版のGitHub Releaseから、検証・trusted publishing・文書公開を順に行います。詳しくは公開手順を参照してください。
 
 ## ライセンス
 

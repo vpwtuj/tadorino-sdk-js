@@ -2,28 +2,30 @@ name: SDK release
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Documentation only: exact stable tag already published to npm (vX.Y.Z)'
+        required: true
+        default: 'v0.1.0'
+        type: string
 permissions:
   contents: read
 concurrency:
   group: sdk-release
   cancel-in-progress: false
 jobs:
-  publish:
-    if: github.event.release.prerelease == false
+  check:
+    if: github.event_name == 'release' && github.event.release.prerelease == false
     runs-on: ubuntu-24.04
     timeout-minutes: 25
-    permissions:
-      contents: read
-      id-token: write
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-          registry-url: https://registry.npmjs.org
           cache: npm
       - run: npm ci
       - name: Match the immutable release tag and package version
@@ -33,10 +35,74 @@ jobs:
       - run: npm run check
       - run: npx playwright install --with-deps chromium firefox webkit
       - run: npm run browser:check
+      - name: Preserve the exact verified distribution
+        run: |
+          mkdir release-package
+          npm pack --ignore-scripts --pack-destination release-package
+          node --input-type=module -e 'import{readFile,readdir}from"node:fs/promises";import{createHash}from"node:crypto";const files=await readdir("release-package");if(files.length!==1)throw Error("Expected one distribution");const expected=JSON.parse(await readFile(".artifacts/package-verification.json","utf8"));const sha=createHash("sha256").update(await readFile(`release-package/${files[0]}`)).digest("hex");if(sha!==expected.tarballSha256)throw Error("Release distribution differs from tested tarball")'
+      - uses: actions/upload-artifact@v7
+        with:
+          name: verified-sdk-distribution
+          path: release-package
+          if-no-files-found: error
+  publish:
+    if: github.event_name == 'release' && github.event.release.prerelease == false
+    needs: check
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@v8
+        with:
+          name: verified-sdk-distribution
+          path: release-package
       - name: Publish using configured npm trusted publishing
         # Initial package creation and the npm trusted publisher must be set up
         # for this repository/workflow; no long-lived npm token is stored here.
-        run: npm publish --access public --provenance
+        run: npm publish release-package/*.tgz --access public --provenance
+  documentation-build:
+    needs: publish
+    # Manual dispatch publishes documentation only. In that case both the
+    # release checks and the npm publish job are intentionally skipped.
+    if: >-
+      ${{ always() && !cancelled() &&
+          ((github.event_name == 'release' && needs.publish.result == 'success') ||
+           github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - name: Validate the exact stable documentation tag
+        id: documentation-target
+        env:
+          DOCUMENTATION_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.event.release.tag_name }}
+        run: |
+          node --input-type=module -e 'import{appendFileSync}from"node:fs";const tag=process.env.DOCUMENTATION_TAG;if(typeof tag!=="string"||tag!==tag.trim()||!/^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(tag))throw Error("Documentation requires an exact stable vX.Y.Z tag");appendFileSync(process.env.GITHUB_OUTPUT,`tag=${tag}\n`)'
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ steps.documentation-target.outputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Match the documentation tag and package version
+        env:
+          DOCUMENTATION_TAG: ${{ steps.documentation-target.outputs.tag }}
+        run: node -e 'const p=require("./package.json");if(p.name!=="@bright203/tadorino-sdk-js"||process.env.DOCUMENTATION_TAG!==`v${p.version}`)throw Error("Documentation tag and package must match")'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run docs:check
       - name: Generate matching versioned documentation after npm success
         run: node scripts/prepare-pages.mjs
       - uses: actions/configure-pages@v6
@@ -44,7 +110,8 @@ jobs:
         with:
           path: pages
   documentation:
-    needs: publish
+    needs: documentation-build
+    if: ${{ always() && !cancelled() && needs.documentation-build.result == 'success' }}
     runs-on: ubuntu-24.04
     permissions:
       pages: write
