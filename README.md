@@ -2,19 +2,19 @@
 
 `@bright203/tadorino-sdk-js` は、ブラウザとNode.jsからタドリノのメモを保存・検索・全文取得するJavaScript SDKです。ES ModulesとCommonJS、TypeScript型宣言をひとつのパッケージで提供します。
 
-## 配布状況
+## 配布とサービス利用
 
-現在は **0.1.0の配布候補** です。npm公開・GitHub Pages公開・Auth0による実ブラウザ接続は、個別に検証してから公開済みと報告します。パッケージの公開とサービスの利用許可は別です。
+SDKのバージョンは **0.1.0** です。npmの配布名は`@bright203/tadorino-sdk-js`、文書は版ごとに管理します。タドリノの利用にはサービス側の利用許可と本人のAccess Tokenが必要です。パッケージの配布情報とサービスへの接続検証は、それぞれの記録を確認してください。
 
 ## インストール
 
-公開後は次のコマンドを使います。
+導入コマンド:
 
 ```sh
 npm install @bright203/tadorino-sdk-js
 ```
 
-公開前のローカル検証では、生成したtarballを利用アプリへインストールします。
+ローカルの配布物を検証する場合は、生成したtarballを利用アプリへインストールします。
 
 ```sh
 npm ci
@@ -58,13 +58,13 @@ const { TadorinoClient, TadorinoError } = require('@bright203/tadorino-sdk-js');
 
 ## 利用例と文書
 
-- [導入ガイド](https://github.com/vpwtuj/tadorino-sdk-js/blob/main/docs/guides/Installation.md): ESM、CommonJS、型宣言、対応環境。
-- [認証ガイド](https://github.com/vpwtuj/tadorino-sdk-js/blob/main/docs/guides/Authentication.md): Auth0 SPA、本人session、トークン更新。
-- [保存の再送とエラー](https://github.com/vpwtuj/tadorino-sdk-js/blob/main/docs/guides/Errors-and-retries.md): 取消、期限、結果不明時の再送。
-- [React＋Vite＋TypeScript](https://github.com/vpwtuj/tadorino-sdk-js/blob/main/docs/guides/React-Vite.md): ブラウザからメモRESTへ接続する例。
-- [対応環境と検証状況](https://github.com/vpwtuj/tadorino-sdk-js/blob/main/docs/guides/Compatibility.md): 実際に確認した版と外部検証の範囲。
-- [公開手順](https://github.com/vpwtuj/tadorino-sdk-js/blob/main/docs/guides/Publishing.md): 初回CLI公開、版を固定した文書公開、以後のtrusted publishing。
-- [Express](https://github.com/vpwtuj/tadorino-sdk-js/blob/main/docs/guides/Express.md): アプリの本人sessionへSDKを組み込む例。
+- [導入ガイド](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.0/docs/guides/Installation.md): ESM、CommonJS、型宣言、対応環境。
+- [認証ガイド](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.0/docs/guides/Authentication.md): Auth0 SPA、本人session、トークン更新。
+- [保存の再送とエラー](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.0/docs/guides/Errors-and-retries.md): 取消、期限、結果不明時の再送。
+- [React＋Vite＋TypeScript](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.0/docs/guides/React-Vite.md): ブラウザからメモRESTへ接続する例。
+- [対応環境と検証状況](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.0/docs/guides/Compatibility.md): 実際に確認した版と外部検証の範囲。
+- [公開手順](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.0/docs/guides/Publishing.md): 初回CLI公開、版を固定した文書公開、以後のtrusted publishing。
+- [Express](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.0/docs/guides/Express.md): アプリの本人sessionへSDKを組み込む例。
 
 APIリファレンスは `src/index.js` のJavaScript＋JSDocからTypeDocで生成します。内部helper、MCP、管理RESTは公開SDKの入口に含みません。
 

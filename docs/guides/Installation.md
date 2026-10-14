@@ -2,7 +2,7 @@
 
 ## 導入
 
-npm公開後は `npm install @bright203/tadorino-sdk-js` で導入できます。公開前はREADMEのtarball手順を使ってください。SDK以外にTypeDoc、React、Auth0 SDKをインストールする必要はありません。
+npmの導入コマンドは `npm install @bright203/tadorino-sdk-js` です。ローカルの配布物を検証する場合はREADMEのtarball手順を使ってください。SDK以外にTypeDoc、React、Auth0 SDKをインストールする必要はありません。
 
 ES Modules:
 
