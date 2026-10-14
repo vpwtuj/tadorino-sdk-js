@@ -103,6 +103,72 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run docs:check
+      - name: Wait for the exact published version to become publicly readable
+        # npm can accept an upload before publish-time scanning makes it installable.
+        # This only reads metadata; it never retries an upload or supplies credentials.
+        run: |
+          node --input-type=module <<'JS'
+          import { readFile } from 'node:fs/promises';
+
+          // Inline so documentation-only dispatch also works for older immutable tags.
+          async function waitForPublishedVersion({ name, version, fetch = globalThis.fetch,
+            now = () => performance.now(), sleep = ms => new Promise(resolve => setTimeout(resolve, ms)),
+            log = console.log, timeoutMs = 15 * 60_000, intervalMs = 30_000, requestTimeoutMs = 10_000 }) {
+            if (name !== '@bright203/tadorino-sdk-js' || typeof version !== 'string' || version !== version.trim() || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)) {
+              throw new Error('Registry wait requires the exact stable SDK package version.');
+            }
+            const url = `https://registry.npmjs.org/${encodeURIComponent(name)}/${encodeURIComponent(version)}`;
+            const deadline = now() + timeoutMs;
+            let attempt = 0;
+            while (now() < deadline) {
+              attempt++;
+              const controller = new AbortController();
+              const timer = setTimeout(() => controller.abort(), Math.min(requestTimeoutMs, deadline - now()));
+              let response;
+              let reason = 'registry transport interrupted';
+              try {
+                try {
+                  response = await fetch(url, { signal: controller.signal, credentials: 'omit', redirect: 'manual',
+                    cache: 'no-store', headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' } });
+                } catch { /* Transport failures are retried within the same deadline. */ }
+                if (response?.status === 200) {
+                  if (!/^application\/json(?:\s*;|$)/i.test(response.headers.get('content-type') ?? '')) {
+                    throw new Error('Registry returned malformed package metadata.');
+                  }
+                  let metadata;
+                  try { metadata = await response.json(); }
+                  catch (error) {
+                    if (!controller.signal.aborted && error instanceof SyntaxError) throw new Error('Registry returned malformed package metadata.');
+                  }
+                  if (metadata !== undefined) {
+                    if (!metadata || typeof metadata !== 'object' || metadata.name !== name || metadata.version !== version) {
+                      throw new Error('Registry package name or version does not match the release.');
+                    }
+                    if (now() >= deadline) break;
+                    log(`Published ${name}@${version} is readable from the public registry.`);
+                    return;
+                  }
+                } else if (response) {
+                  if (response.status !== 404 && response.status !== 429 && (response.status < 500 || response.status > 599)) {
+                    throw new Error(`Registry rejected the availability check with HTTP ${response.status}.`);
+                  }
+                  reason = `HTTP ${response.status}`;
+                }
+              } finally {
+                clearTimeout(timer);
+                if (response?.body && !response.body.locked) void response.body.cancel().catch(() => {});
+              }
+              const remaining = deadline - now();
+              if (remaining <= 0) break;
+              log(`Waiting for public ${name}@${version}: ${reason}, attempt ${attempt}.`);
+              await sleep(Math.min(intervalMs, remaining));
+            }
+            throw new Error('Package version is not publicly readable after the bounded registry wait. Resume documentation later; do not republish the same version.');
+          }
+
+          const manifest = JSON.parse(await readFile('package.json', 'utf8'));
+          await waitForPublishedVersion({ name: manifest.name, version: manifest.version });
+          JS
       - name: Generate matching versioned documentation after npm success
         run: node scripts/prepare-pages.mjs
       - uses: actions/configure-pages@v6

@@ -26,6 +26,8 @@ npm view @bright203/tadorino-sdk-js@0.1.0 version dist.integrity --json
 
 npmは初回作成・公開と設定変更に2FAを要求します。2FAを迂回するtokenや認証設定の緩和で代替しません。[npmの2FA要件](https://docs.npmjs.com/requiring-2fa-for-package-publishing-and-settings-modification/)
 
+`npm publish` の終了コード0は、公開要求の受理を示します。npmの公開時スキャンが終わるまで、版の取得がHTTP404になり、利用アプリへinstallできないことがあります。典型的には約5分、混雑時などは15分以上かかる場合があります。同じ版を再アップロードせず、公開レジストリでその名前・versionが取得できるようになるのを確認します。[npm公開時スキャンの公式説明](https://github.blog/changelog/2026-07-28-npm-publish-time-malware-scanning-and-dual-use-metadata/)
+
 このローカルCLI公開ではGitHub ActionsのOIDC provenanceは付きません。公開されたtarballを新規アプリへinstallし、読み込み・型・主要操作の検証結果と公開元commitを記録します。公開前のローカル検証だけでnpm配布済みと報告しません。[npm publish公式仕様](https://docs.npmjs.com/cli/v11/commands/npm-publish/)
 
 ## 初回版の文書だけを公開する
@@ -34,10 +36,10 @@ GitHub PagesのSourceをGitHub Actionsへ設定します。npm版と対応する
 
 1. SDKリポジトリのActionsで **SDK release** を選び、**Run workflow** を実行します。workflowのbranchは手動実行入口を含む `main` を選びます。
 2. `release_tag` に公開済みnpm版の正確なタグ、例えば `v0.1.0` を入力します。
-3. この経路はnpm公開jobを実行しません。指定タグをcheckoutして型・JSDoc由来の文書を生成し、npm公開済みversion・package・文書メタデータの一致を検査してからPagesへ配置します。
+3. この経路はnpm公開jobを実行しません。指定タグをcheckoutして型・JSDoc由来の文書を生成します。公開レジストリでその版が取得できるまで、最大15分・30秒間隔で待ちます。各要求は最大10秒です。npm公開済みversion・package・文書メタデータの一致を検査してからPagesへ配置します。
 4. 公開先の `/v0.1.0/version.json` と版別文書を確認します。`/latest/` は保持している最も新しい安定版を指し、古い版の再配置で新しい版を上書きしません。
 
-npm版が未公開、タグ名が安定版形式ではない、タグが存在しない、packageや文書の版が不一致、レジストリが確認不能の場合は配置を停止します。文書だけの手動実行は、npm公開後の文書生成・Pages配置失敗を復旧する際にも使えます。
+HTTP404・429・5xx・通信中断は待機期限内で再確認します。それ以外のHTTP失敗、取得した名前・versionの不一致、不正なメタデータは配置を停止します。15分で公開版を確認できなかった場合も配置を停止し、公開状況を確認してから文書専用の手動実行を再開します。タグ名が安定版形式ではない、タグが存在しない、packageや文書の版が不一致の場合も停止します。文書だけの手動実行は、npm公開後の文書生成・Pages配置失敗を復旧する際にも使えます。
 
 ## 以後のtrusted publishing
 
