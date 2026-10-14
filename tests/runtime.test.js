@@ -242,18 +242,41 @@ test('body stream network failure retains status and safe ID', async () => {
   await assert.rejects(sdk.getNote(ID), expectError('network', 'getNote', { status: 503, requestId: REQUEST_ID }));
 });
 
-test('caller cancellation takes priority at a deadline checkpoint and sanitized reason stays private', async () => {
+test('caller cancellation takes priority at a deadline checkpoint and sanitized reason stays private', async t => {
+  // Keep validation and the initial checkpoint before the deadline, independent
+  // of CI scheduling. The token hook establishes both conditions before the
+  // next checkpoint instead of hoping a real 1ms window remains open.
+  let now = 0;
+  t.mock.method(Date, 'now', () => now);
   const controller = new AbortController();
-  let fetches = 0;
+  let tokenCalls = 0; let fetches = 0;
   const sdk = client(() => { fetches++; return response(NOTE); }, {
     getAccessToken: () => {
-      const started = Date.now();
-      while (Date.now() === started) { /* Reach the 1ms deadline without yielding. */ }
+      tokenCalls++;
+      now = 1;
       controller.abort(new Error('LEAK raw-secret'));
       return TOKEN;
     },
   });
   await assert.rejects(sdk.getNote(ID, { timeoutMs: 1, signal: controller.signal }), expectError('aborted', 'getNote'));
+  assert.equal(tokenCalls, 1);
+  assert.equal(now, 1);
+  assert.equal(fetches, 0);
+});
+
+test('deadline reached before the token hook is timeout when the caller has not cancelled', async t => {
+  // Reproduce the scheduling case that made the previous wall-clock priority
+  // test flaky: time advances after operation start but before token acquisition.
+  let reads = 0;
+  t.mock.method(Date, 'now', () => reads++ === 0 ? 0 : 1);
+  const controller = new AbortController();
+  let tokenCalls = 0; let fetches = 0;
+  const sdk = client(() => { fetches++; return response(NOTE); }, {
+    getAccessToken: () => { tokenCalls++; controller.abort(); return TOKEN; },
+  });
+  await assert.rejects(sdk.getNote(ID, { timeoutMs: 1, signal: controller.signal }), expectError('timeout', 'getNote'));
+  assert.equal(controller.signal.aborted, false);
+  assert.equal(tokenCalls, 0);
   assert.equal(fetches, 0);
 });
 
