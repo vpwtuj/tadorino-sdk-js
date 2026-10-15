@@ -3824,6 +3824,16 @@
               }
             }
           },
+          "422": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
             "content": {
@@ -4210,6 +4220,16 @@
               }
             }
           },
+          "422": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
             "content": {
@@ -4439,6 +4459,16 @@
             }
           },
           "415": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
             "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
             "content": {
               "application/json": {
@@ -4698,6 +4728,16 @@
             }
           },
           "415": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
             "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
             "content": {
               "application/json": {
@@ -4969,6 +5009,16 @@
             }
           },
           "415": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
             "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
             "content": {
               "application/json": {
