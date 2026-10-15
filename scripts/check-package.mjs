@@ -22,6 +22,21 @@ try {
   }
   const tarball = path.join(temporary, packed.filename);
   const digest = createHash('sha256').update(await readFile(tarball)).digest('hex');
+  // Exercise the actual npm CLI parser with the same ./release-package path as
+  // production. A bare owner/name relative path is parsed as GitHub shorthand.
+  const publicationDirectory = path.join(temporary, 'release-package');
+  await mkdir(publicationDirectory);
+  await cp(tarball, path.join(publicationDirectory, packed.filename));
+  assert.equal((await readdir(publicationDirectory)).length, 1);
+  const emptyConfig = path.join(temporary, 'empty-publish.npmrc');
+  await writeFile(emptyConfig, '');
+  const previewOutput = JSON.parse(await run('npm', ['publish', `./release-package/${packed.filename}`, '--dry-run', '--ignore-scripts', '--access', 'public', '--json', '--userconfig', emptyConfig], temporary));
+  // npm 11 keys publish previews by package name; older CLI output can be a
+  // single manifest or an array. All forms must identify this exact archive.
+  const preview = Array.isArray(previewOutput) ? previewOutput[0] : previewOutput[packed.name] ?? previewOutput;
+  assert.equal(preview.name, packed.name); assert.equal(preview.version, packed.version);
+  assert.equal(preview.integrity, packed.integrity);
+  assert.equal(createHash('sha256').update(await readFile(path.join(publicationDirectory, packed.filename))).digest('hex'), digest);
   const app = path.join(temporary, 'consumer');
   await mkdir(app);
   await writeFile(path.join(app, 'package.json'), JSON.stringify({ name: 'sdk-package-fixture', private: true, type: 'module', dependencies: { '@bright203/tadorino-sdk-js': `file:${tarball}` } }));
@@ -100,6 +115,6 @@ ${types}`);
   assert.equal(JSON.parse(await readFile(path.join(legacy, 'node_modules/@bright203/tadorino-sdk-js/package.json'), 'utf8')).version, '0.1.0');
   await run('npm', ['run', 'check'], legacy);
   await mkdir(path.join(root, '.artifacts'), { recursive: true });
-  await writeFile(path.join(root, '.artifacts/package-verification.json'), JSON.stringify({ package: packed.name, version: packed.version, tarballSha256: digest, node: process.version, esm: true, commonjs: true, nodeNextTypes: true, readmeExample: true, reactViteBuild: true, expressSessionFixture: true, machineExample: true, publishedVersionCompatibility: '0.1.0', syntheticOnly: true }, null, 2) + '\n');
+  await writeFile(path.join(root, '.artifacts/package-verification.json'), JSON.stringify({ package: packed.name, version: packed.version, tarballSha256: digest, node: process.version, npmPublishDryRun: true, esm: true, commonjs: true, nodeNextTypes: true, readmeExample: true, reactViteBuild: true, expressSessionFixture: true, machineExample: true, publishedVersionCompatibility: '0.1.0', syntheticOnly: true }, null, 2) + '\n');
   console.log(`Packed SDK ${packed.version}: ESM, CommonJS, NodeNext types, README, React/Vite, user-session Express and local M2M examples verified from one tarball.`);
 } finally { await rm(temporary, { recursive: true, force: true }); }

@@ -7,7 +7,7 @@ on:
       release_tag:
         description: 'Documentation only: exact stable tag already published to npm (vX.Y.Z)'
         required: true
-        default: 'v0.1.1'
+        default: 'v0.1.2'
         type: string
 permissions:
   contents: read
@@ -40,6 +40,9 @@ jobs:
           mkdir release-package
           npm pack --ignore-scripts --pack-destination release-package
           node --input-type=module -e 'import{readFile,readdir}from"node:fs/promises";import{createHash}from"node:crypto";const files=await readdir("release-package");if(files.length!==1)throw Error("Expected one distribution");const expected=JSON.parse(await readFile(".artifacts/package-verification.json","utf8"));const sha=createHash("sha256").update(await readFile(`release-package/${files[0]}`)).digest("hex");if(sha!==expected.tarballSha256)throw Error("Release distribution differs from tested tarball")'
+      - name: Validate the same local tarball with the npm publish parser
+        # The leading ./ is required: npm interprets owner/name as GitHub shorthand.
+        run: npm publish ./release-package/*.tgz --dry-run --ignore-scripts --access public
       - uses: actions/upload-artifact@v7
         with:
           name: verified-sdk-distribution
@@ -67,7 +70,7 @@ jobs:
       - name: Publish using configured npm trusted publishing
         # Initial package creation and the npm trusted publisher must be set up
         # for this repository/workflow; no long-lived npm token is stored here.
-        run: npm publish release-package/*.tgz --access public --provenance
+        run: npm publish ./release-package/*.tgz --access public --provenance
   documentation-build:
     needs: publish
     # Manual dispatch publishes documentation only. In that case both the

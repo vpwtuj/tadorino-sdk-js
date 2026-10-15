@@ -53,7 +53,7 @@ Node.js 22.12以降の22系・24系、Chrome・Firefox・Safariの直近2主要�
 
 ## 配布と文書の確認
 
-### 0.1.1の機械主体例
+### 0.1.2に含める機械主体例
 
 2026-10-15、追加したlocalhost React＋Vite＋TypeScript → Express → SDKの機械例を、Node.js 24.21.0で検査しました。SDK41件・本人Express4件・機械例20件に加え、機械providerと入口の検査、React build・型・TypeDoc・同一candidate tarballによる導入が成功しました。公開npm0.1.0を新規installした同じ機械例でも検査を実行し、既存 `getAccessToken` APIでの互換を確認しました。
 
@@ -63,7 +63,7 @@ Chromium 156.0.8078.4・Playwright WebKit 27.2では、本人例と機械例の�
 
 親プロジェクトでは、このPCのChromeで機械例の画面から実RS256 JWT検証・一時PostgreSQL schemaを経由する3操作と同一キー再送を確認しました。機械JWTはバックエンドへだけ注入しています。ローカル署名鍵・合成機械・一時DBによる検証であり、実Auth0 Client Credentialsや公開環境への接続成功は主張しません。実Safari・前の主要ブラウザ版の確認、npm・版別Pagesへの配置も別の工程です。
 
-### 0.1.1の実Auth0・公開開発サービス検証
+### 0.1.1準備時の実Auth0・公開開発サービス検証
 
 2026-10-15、実Auth0のdefault token profile、Access Tokenの900秒の有効期間、今回の開発テナントのFree枠がM2M token月1000件であることを確認しました。実Auth0 Client Credentialsから取得したtokenで公開メモREST・開発Supabaseを経由し、保存・検索・全文取得、同じキー・同じ内容の再送、同じキーで内容が違う場合の409を確認しました。localhostのReact → Express → SDKから公開メモRESTへの保存も成功しました。資格情報・機械tokenはバックエンドだけで扱います。
 
@@ -83,10 +83,18 @@ Chromium 156.0.8078.4・Playwright WebKit 27.2では、本人例と機械例の�
 
 09:10:42 JSTまでにClient ID交換の実測も成功しました。未登録の新clientは401となり、停止中の同じ機械IDへ交換した後も停止中は401、再開後は新clientから元メモ・同一キー再送が成功しました。旧clientの有効期限内JWTは401となり、メモの所有者IDは維持されました。管理対象・本人対応も旧側を停止すると旧操作が404となり、新対象の登録後は本人CLIからrecover・receiptが成功しました。これらは提供側で明示した登録・停止・交換の結果であり、SDKが所有者やclient対応を変更するものではありません。
 
-Windows上の実アプリ、実Safari、今回変更後の新たな本人MCP再回帰は、この実接続記録の成功範囲に含めません。npm0.1.1・対応する版別Pagesは、この実接続記録の時点では未公開です。npm trusted publisherも本人MFAの完了前であり、CLIのdry-runを登録・OIDC公開成功と扱いません。以後の配布状態はnpm・版別Pagesの実際の公開情報を確認します。
+2026-10-15、本人の新しいメールOTPログインとPKCEによる実JWT取得を経由し、公開メモRESTの保存201、同一キー再送・検索・全文取得200を確認しました。MCPからも同じメモを検索し、全文の一致を確認しています。本人のメモ用tokenを管理RESTへ送ると401となり、検証用に追加したcallbackも元へ戻しました。この本人回帰を、過去の実績や合成CIとは別の今回の実接続結果として記録します。
+
+Windows上の実アプリ、実Safari・前の主要ブラウザ版は、この実接続記録の成功範囲に含めません。実接続とnpm・Pagesの配布状態は別に確認します。
+
+### 0.1.1の公開失敗と0.1.2の修正
+
+npm trusted publisher登録後の[0.1.1公開workflow](https://github.com/vpwtuj/tadorino-sdk-js/actions/runs/38661095479)はcheck成功、publish失敗でした。npmが相対tarballパスをGitHub shorthandと解釈し、`git ls-remote` が終了コード128となったため、アップロード成功はありません。exact0.1.1のpublic registryと版別Pagesは404、latestは0.1.0のままであることを確認しました。不変tag `v0.1.1` は移動・削除せず保持します。
+
+0.1.2はSDK runtimeを変えず、ローカルパスを明示した公開コマンドと同経路の実npm dry-run検査を追加します。dry-runやtrusted publisherの設定成功を、公開済みtarball・OIDC provenanceの検証成功と扱いません。配布状態は[npm](https://www.npmjs.com/package/@bright203/tadorino-sdk-js)、[GitHub Release](https://github.com/vpwtuj/tadorino-sdk-js/releases)、実際の版別Pagesを確認します。
 
 合成HTTP・ローカル実DB・公開開発サービスの各検証は、上記の環境と範囲で区別して記録します。npmの配布確認とGitHub Pagesの配置・閲覧確認も、それぞれの完了条件として扱います。
 
-対象版のnpm配布情報は[npm package](https://www.npmjs.com/package/@bright203/tadorino-sdk-js)、版別文書は[0.1.0](https://vpwtuj.github.io/tadorino-sdk-js/v0.1.0/)を保持し、0.1.1の配置後は `/v0.1.1/` で提供します。公開完了の記録では、取得したtarballとタグの一致、新規利用アプリでの検査、Pagesの `version.json` とnpm版の一致を確認します。文書内のリンクやローカルbuildの成功だけを、公開済みの証拠にはしません。
+対象版のnpm配布情報は[npm package](https://www.npmjs.com/package/@bright203/tadorino-sdk-js)、版別文書は[0.1.0](https://vpwtuj.github.io/tadorino-sdk-js/v0.1.0/)を保持し、0.1.2の配置後は `/v0.1.2/` で提供します。公開完了の記録では、取得したtarballとタグの一致、新規利用アプリでの検査、Pagesの `version.json` とnpm版の一致を確認します。文書内のリンクやローカルbuildの成功だけを、公開済みの証拠にはしません。
 
 Firefoxのローカル起動失敗は[PlaywrightのmacOS報告](https://github.com/microsoft/playwright/issues/42768)と[Mozillaのprofile選択の報告](https://bugzilla.mozilla.org/show_bug.cgi?id=2062988)に対応する症状です。SDKの検査をskipして成功と扱う設定は加えていません。

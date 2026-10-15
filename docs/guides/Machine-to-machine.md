@@ -1,6 +1,6 @@
 # Machine-to-machine
 
-このガイドはSDK0.1.1のソースに追加した `examples/m2m` を説明します。0.1.0からあるAPIを使う追加例です。Node専用Client Credentials helperとReact/Express例はGitHubソースで提供し、npmパッケージのexportや実行時依存へ追加していません。0.1.0の不変tag・配布物・版別文書も変更しません。SDKの導入とメモサービス側のM2M登録・有効化は別の工程です。
+このガイドはSDK0.1.2のソースに追加した `examples/m2m` を説明します。0.1.0からあるAPIを使う追加例です。Node専用Client Credentials helperとReact/Express例はGitHubソースで提供し、npmパッケージのexportや実行時依存へ追加していません。0.1.0の不変tag・配布物・版別文書も変更しません。SDKの導入とメモサービス側のM2M登録・有効化は別の工程です。
 
 ## 所有者と認可
 
@@ -67,3 +67,5 @@ Auth0取得の一時障害（network・timeout・429・5xx）はローカル入�
 `npm run check` はproviderのcache・期限・並行・取消・設定分離・上限・失敗、ローカル入口の保護・起動失敗・3操作・再送を検査します。同じcandidate tarballと公開済みnpm0.1.0の両方で例を新規installします。`npm run browser:check` は本人例に加えて機械例をChromium／Firefox／WebKitの合成HTTP fixtureで検査します。これは実Auth0や実PostgreSQLを確認した証拠ではありません。
 
 親プロジェクトでの実JWT／一時PostgreSQLを経由する画面検証と、実Auth0 Client Credentials／公開サービスの検証は別に記録します。本人OTP・本人sessionの例はそのまま残しています。公開npm・Pagesの更新も独立した工程です。
+
+2026-10-15には、実サービスで本人の新しいメールOTP＋PKCE、メモRESTの保存・同一再送・検索・全文取得、MCPでの同じメモの検索・全文一致、メモ用tokenの管理REST拒否も回帰確認しました。具体的な検証範囲はCompatibilityガイド、配布状態はnpm・GitHub Release・版別Pagesで確認します。Windowsと実Safariの確認とは区別します。
