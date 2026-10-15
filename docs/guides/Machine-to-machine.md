@@ -1,6 +1,6 @@
 # Machine-to-machine
 
-このガイドはSDK0.1.1のソースに追加した `examples/m2m` を説明します。0.1.0からあるAPIを使う追加例です。Node専用Client Credentials helperとReact/Express例はGitHubソースで提供し、npmパッケージのexportや実行時依存へ追加していません。0.1.0の不変tag・配布物・版別文書も変更しません。SDKの導入とメモサービス側のM2M登録・有効化は別の工程です。
+このガイドはSDK0.1.2のソースに追加した `examples/m2m` を説明します。0.1.0からあるAPIを使う追加例です。Node専用Client Credentials helperとReact/Express例はGitHubソースで提供し、npmパッケージのexportや実行時依存へ追加していません。0.1.0の不変tag・配布物・版別文書も変更しません。SDKの導入とメモサービス側のM2M登録・有効化は別の工程です。
 
 ## 所有者と認可
 

@@ -2,7 +2,13 @@
 
 このガイドはSDKの提供者向けです。npm公開・GitHub Pages公開・利用者の認証許可は別々に確認します。
 
-0.1.0は初回CLI公開済みです。0.1.1のソースは本人用SDK APIを維持し、機械主体の利用例と文書を追加します。次の公開では、下記のtrusted publisher設定と検証済みtarballの一致を確認し、新しい不変tag `v0.1.1` からRelease経路を使います。0.1.0のtag・npm配布物・版別Pagesを上書きしません。公開候補の検査だけでnpm公開済みとは扱いません。
+0.1.0は初回CLI公開済みです。0.1.1のGitHub tag・Releaseは保持しますが、公開workflowはnpmアップロード前に失敗しました。修正した0.1.2では、下記のtrusted publisher設定と検証済みtarballの一致を確認し、新しい不変tag `v0.1.2` からRelease経路を使います。既存tagや0.1.0のnpm配布物・版別Pagesを上書きしません。公開候補の検査だけでnpm公開済みとは扱いません。
+
+## 0.1.1の公開失敗と0.1.2の修正
+
+2026-10-15の[release workflow](https://github.com/vpwtuj/tadorino-sdk-js/actions/runs/38661095479)はcheck成功後、publishで終了コード128となりました。`npm publish release-package/*.tgz` の展開結果をnpmがGitHub shorthandと解釈し、`git ls-remote` が失敗しています。registryへのアップロード成功はなく、exact0.1.1のpublic registryは404、Pagesの0.1.1も404でした。これは公開要求が受理された後のスキャン待ちとは異なります。
+
+0.1.1の不変tagを動かさず、0.1.2で `npm publish ./release-package/*.tgz --access public --provenance` に修正します。check jobは検証済みSHAと同じtarballに `npm publish ./release-package/*.tgz --dry-run --ignore-scripts --access public` を実行し、実CLIがローカルファイルとして読めることを先に検査します。dry-runはuploadやOIDC公開の成功を証明しません。修正後も、publish受理後に同じversionを再uploadしてはいけません。
 
 ## 初回のパッケージ公開
 
@@ -22,7 +28,7 @@ node --input-type=module -e 'import{readFile}from"node:fs/promises";import{creat
 5. 公開する名前・version・ファイル一覧を確認したうえで、次のCLI操作を実行します。npmの対話的な2FA確認は所有者が完了します。認証コードをチャットやリポジトリへ残しません。
 
 ```sh
-npm publish .artifacts/release/bright203-tadorino-sdk-js-0.1.0.tgz --access public
+npm publish ./.artifacts/release/bright203-tadorino-sdk-js-0.1.0.tgz --access public
 npm view @bright203/tadorino-sdk-js@0.1.0 version dist.integrity --json
 ```
 
@@ -73,6 +79,6 @@ npm trust list @bright203/tadorino-sdk-js
 
 以後の新しい安定版はversionを更新し、対応する `vX.Y.Z` タグのGitHub Releaseを公開します。workflowは検証済みtarballのSHAを照合して渡し、短期OIDC認証でnpmへ公開した後、対応版の文書を配置します。prereleaseはこの安定版経路では公開しません。
 
-0.1.1では、SDK checksのNode22/24と本人・機械の3ブラウザエンジン検査が成功したcommitをmainへ取り込み、その同じcommitへtagを作ります。npm側で直接 `npm publish` が許可されたtrusted publisherを確認してからGitHub Releaseを公開します。初のOIDC公開に失敗した場合は設定・期限・workflow名・repository URLを確認し、長期tokenへ切り替えたり既存の2FAを緩めたりしません。uploadが受理されていないことを確認できる場合だけpublish jobを再実行し、既に公開処理中・公開済みなら同じ版を再uploadせず、公開レジストリの確認と文書jobの復旧へ進みます。
+0.1.2では、SDK checksのNode22/24と本人・機械の3ブラウザエンジン検査が成功したcommitをmainへ取り込み、その同じcommitへtagを作ります。npm側で直接 `npm publish` が許可されたtrusted publisherを確認してからGitHub Releaseを公開します。初のOIDC公開に失敗した場合は設定・期限・workflow名・repository URLを確認し、長期tokenへ切り替えたり既存の2FAを緩めたりしません。uploadが受理されていないことを確認できる場合だけpublish jobを再実行し、既に公開処理中・公開済みなら同じ版を再uploadせず、公開レジストリの確認と文書jobの復旧へ進みます。
 
 npm公開後に文書jobだけが失敗した場合は、失敗したjobの再実行か文書専用の手動実行で復旧します。同じnpm versionの再公開はできないため、初回手動公開済み `v0.1.0` に後からGitHub Releaseを作成して自動npm公開を起動しないでください。初回タグを保持し、次の新しい版からRelease経路を使います。

@@ -14,6 +14,20 @@ const wait = Function(`${functionSource}; return waitForPublishedVersion;`)();
 const name = '@bright203/tadorino-sdk-js';
 const version = '0.1.0';
 const ready = () => Response.json({ name, version });
+
+test('release validates and publishes the same explicit local tarball path after checksum verification', () => {
+  const checkJob = workflow.split('  check:\n')[1].split('  publish:\n')[0];
+  const publishJob = workflow.split('  publish:\n')[1].split('  documentation-build:\n')[0];
+  const localPath = './release-package/*.tgz';
+  assert(checkJob.includes(`run: npm publish ${localPath} --dry-run --ignore-scripts --access public`));
+  assert(publishJob.includes(`run: npm publish ${localPath} --access public --provenance`));
+  assert(!workflow.includes('npm publish release-package/'));
+  assert(checkJob.indexOf('Release distribution differs from tested tarball') < checkJob.indexOf(`npm publish ${localPath}`));
+  assert(checkJob.indexOf(`npm publish ${localPath}`) < checkJob.indexOf('uses: actions/upload-artifact@v7'));
+  assert(checkJob.includes('files.length!==1'));
+  assert(publishJob.includes('needs: check'));
+  assert(publishJob.includes('name: verified-sdk-distribution'));
+});
 function virtualClock(overrides = {}) {
   let now = 0;
   const sleeps = [];
