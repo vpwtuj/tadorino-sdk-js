@@ -1,10 +1,12 @@
 # Tadorino JavaScript SDK
 
-`@bright203/tadorino-sdk-js` は、ブラウザとNode.jsからタドリノのメモを保存・検索・全文取得するJavaScript SDKです。ES ModulesとCommonJS、TypeScript型宣言をひとつのパッケージで提供します。
+`@bright203/tadorino-sdk-js` は、ブラウザとNode.jsから、タドリノのメモを保存・検索・取得・編集・整理し、履歴・ZIP入出力・完全削除を利用するJavaScript SDKです。ES ModulesとCommonJS、TypeScript型宣言をひとつのパッケージで提供します。
 
 ## 配布とサービス利用
 
-このソースのSDKバージョンは **0.1.2** です。npmの配布名は`@bright203/tadorino-sdk-js`、文書は版ごとに管理します。タドリノの利用にはサービス側の利用許可とAccess Tokenが必要です。本人sessionと登録済みの機械主体は、それぞれ別のメモ所有者として扱います。配布状態は[npm](https://www.npmjs.com/package/@bright203/tadorino-sdk-js)、接続の実績は対応環境ガイドで確認してください。
+このソースのSDKバージョンは **0.2.0** です。npmの配布名は`@bright203/tadorino-sdk-js`、文書は版ごとに管理します。タドリノの利用にはサービス側の利用許可とAccess Tokenが必要です。本人sessionと登録済みの機械主体は、それぞれ別のメモ所有者として扱います。配布状態は[npm](https://www.npmjs.com/package/@bright203/tadorino-sdk-js)、接続の実績は対応環境ガイドで確認してください。
+
+0.2.0は編集・一覧・履歴・アーカイブ・ゴミ箱・ZIP入出力・完全削除を追加します。これらは0.1.2には含まれません。利用にはサービス側の機能有効化と、操作ごとのscopeおよび所有者×Client IDの許可が必要です。[ライフサイクルガイド](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.2.0/docs/guides/Lifecycle.md)で手順を確認してください。公開候補の検証では下記のローカルtarballを使い、npm公開の完了は配布情報で確認します。
 
 ## インストール
 
@@ -21,7 +23,7 @@ npm ci
 npm run build
 npm pack
 # 利用アプリのディレクトリで:
-npm install /absolute/path/bright203-tadorino-sdk-js-0.1.2.tgz
+npm install /absolute/path/bright203-tadorino-sdk-js-0.2.0.tgz
 ```
 
 ## 保存・検索・取得
@@ -58,13 +60,14 @@ const { TadorinoClient, TadorinoError } = require('@bright203/tadorino-sdk-js');
 
 ## 利用例と文書
 
-- [導入ガイド](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.2/docs/guides/Installation.md): ESM、CommonJS、型宣言、対応環境。
-- [認証ガイド](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.2/docs/guides/Authentication.md): Auth0 SPA、本人session、トークン更新。
-- [保存の再送とエラー](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.2/docs/guides/Errors-and-retries.md): 取消、期限、結果不明時の再送。
-- [React＋Vite＋TypeScript](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.2/docs/guides/React-Vite.md): ブラウザからメモRESTへ接続する例。
-- [対応環境と検証状況](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.2/docs/guides/Compatibility.md): 実際に確認した版と外部検証の範囲。
-- [公開手順](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.2/docs/guides/Publishing.md): 初回CLI公開、版を固定した文書公開、以後のtrusted publishing。
-- [Express](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.2/docs/guides/Express.md): アプリの本人sessionへSDKを組み込む例。
+- [編集・履歴・ZIP入出力・完全削除](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.2.0/docs/guides/Lifecycle.md): 操作権限・再送・streamの完了確認。
+- [導入ガイド](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.2.0/docs/guides/Installation.md): ESM、CommonJS、型宣言、対応環境。
+- [認証ガイド](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.2.0/docs/guides/Authentication.md): Auth0 SPA、本人session、トークン更新。
+- [保存の再送とエラー](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.2.0/docs/guides/Errors-and-retries.md): 取消、期限、結果不明時の再送。
+- [React＋Vite＋TypeScript](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.2.0/docs/guides/React-Vite.md): ブラウザからメモRESTへ接続する例。
+- [対応環境と検証状況](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.2.0/docs/guides/Compatibility.md): 実際に確認した版と外部検証の範囲。
+- [公開手順](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.2.0/docs/guides/Publishing.md): 初回CLI公開、版を固定した文書公開、以後のtrusted publishing。
+- [Express](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.2.0/docs/guides/Express.md): アプリの本人sessionへSDKを組み込む例。
 
 APIリファレンスは `src/index.js` のJavaScript＋JSDocからTypeDocで生成します。内部helper、MCP、管理RESTは公開SDKの入口に含みません。
 
@@ -72,7 +75,7 @@ APIリファレンスは `src/index.js` のJavaScript＋JSDocからTypeDocで生
 
 `examples/m2m` にReact＋Vite＋TypeScript → localhost Express → SDK → メモRESTの例を追加しています。Node専用のClient Credentials取得helperをバックエンドへ置き、ブラウザへClient Secretや機械のAccess Tokenを返しません。既存の本人OTP例・本人session例も維持しています。
 
-この例は0.1.0からある `getAccessToken` と3操作だけで動作します。Node専用helperとReact/Express例はGitHubのソースで提供し、npmパッケージのexportや実行時依存へ追加していません。[機械主体ガイド](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.2/docs/guides/Machine-to-machine.md)で設定・制約を確認できます。メモサービス側のM2M登録・有効化が別途必要です。
+この例は0.1.0からある `getAccessToken` と3操作だけで動作します。Node専用helperとReact/Express例はGitHubのソースで提供し、npmパッケージのexportや実行時依存へ追加していません。[機械主体ガイド](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.2.0/docs/guides/Machine-to-machine.md)で設定・制約を確認できます。メモサービス側のM2M登録・有効化が別途必要です。
 
 ## 開発と検証
 
@@ -101,9 +104,9 @@ SDKに実行時の外部依存はありません。React・Auth0・Express・文
 
 ## パッケージと文書の公開
 
-初回は検証済みtarballを所有者の2FA付きnpm CLIから公開し、次の新しい版を公開する直前にnpmのパッケージ設定で `vpwtuj/tadorino-sdk-js` の `release.yml` をtrusted publisherとして登録します。長期の `NPM_TOKEN` は使いません。
+0.1.2はGitHub Actionsのtrusted publishingで公開済みです。新しい版は `vpwtuj/tadorino-sdk-js` の `release.yml` で、CIが検査したtarballを短期OIDC認証で公開します。長期の `NPM_TOKEN` は使いません。
 
-初回版の文書は、公開済みnpm版と一致する `v0.1.0` タグを指定し、SDK release workflowの手動実行から配置できます。この操作は文書だけを生成・配置し、同じnpm版を再公開しません。以後は新しい版のGitHub Releaseから、検証・trusted publishing・文書公開を順に行います。詳しくは公開手順を参照してください。
+追加APIに対応する公開サーバーの検証を終えてから、CI成功commitに対応する新しいGitHub Releaseを公開します。検証・npm公開・版別文書公開の順に進みます。公開済みnpm版の文書だけを復旧するときは、正確なtagを指定した手動実行を使います。詳しくは公開手順を参照してください。
 
 ## ライセンス
 

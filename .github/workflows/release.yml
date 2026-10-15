@@ -7,7 +7,7 @@ on:
       release_tag:
         description: 'Documentation only: exact stable tag already published to npm (vX.Y.Z)'
         required: true
-        default: 'v0.1.2'
+        default: 'v0.2.0'
         type: string
 permissions:
   contents: read

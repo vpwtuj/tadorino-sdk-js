@@ -4,11 +4,11 @@
  */
 /**
  * The memo operation that failed, or null for constructor configuration.
- * @typedef {'createNote'|'searchNotes'|'getNote'|null} Operation The failed operation, or null for constructor configuration.
+ * @typedef {'createNote'|'searchNotes'|'getNote'|'listNotes'|'getTrashedNote'|'updateNote'|'archiveNote'|'unarchiveNote'|'trashNote'|'restoreNote'|'listNoteVersions'|'listTrashedNoteVersions'|'getNoteVersion'|'getTrashedNoteVersion'|'restoreNoteVersion'|'exportNotes'|'importNotes'|'getNoteImport'|'cancelNoteImport'|'purgeNote'|'getNotePurge'|null} Operation The failed operation, or null for constructor configuration.
  */
 /**
  * Known memo REST error codes; unknown or malformed upstream codes become null.
- * @typedef {'invalid_request'|'invalid_input'|'invalid_token'|'insufficient_scope'|'invalid_host'|'invalid_origin'|'not_found'|'route_not_found'|'method_not_allowed'|'not_acceptable'|'idempotency_conflict'|'request_too_large'|'unsupported_media_type'|'temporarily_unavailable'|'internal_error'} RestErrorCode Known REST code; unknown or malformed upstream codes become null.
+ * @typedef {'invalid_request'|'invalid_input'|'invalid_token'|'insufficient_scope'|'invalid_host'|'invalid_origin'|'not_found'|'route_not_found'|'method_not_allowed'|'not_acceptable'|'idempotency_conflict'|'request_too_large'|'unsupported_media_type'|'temporarily_unavailable'|'internal_error'|'invalid_cursor'|'revision_conflict'|'state_conflict'|'note_purge_pending'|'note_purged'|'intent_expired'|'export_too_large'|'invalid_archive'|'unsupported_archive_version'|'import_too_large'|'import_in_progress'} RestErrorCode Known REST code; unknown or malformed upstream codes become null.
  */
 
 /** @internal */
@@ -17,6 +17,7 @@ export const ERROR_CODES = new Set([
   'invalid_host', 'invalid_origin', 'not_found', 'route_not_found',
   'method_not_allowed', 'not_acceptable', 'idempotency_conflict',
   'request_too_large', 'unsupported_media_type', 'temporarily_unavailable', 'internal_error',
+  'invalid_cursor', 'revision_conflict', 'state_conflict', 'note_purge_pending', 'note_purged', 'intent_expired', 'export_too_large', 'invalid_archive', 'unsupported_archive_version', 'import_too_large', 'import_in_progress',
 ]);
 
 /** @type {Record<TadorinoErrorKind, string>} */
@@ -52,7 +53,7 @@ export class TadorinoError extends Error {
     /** The machine-readable failure classification. @type {TadorinoErrorKind} */
     this.kind = selected;
     /** The operation, or null for configuration errors. @type {Operation} */
-    this.operation = ['createNote', 'searchNotes', 'getNote'].includes(details.operation ?? '') ? details.operation ?? null : null;
+    this.operation = ['createNote', 'searchNotes', 'getNote', 'listNotes', 'getTrashedNote', 'updateNote', 'archiveNote', 'unarchiveNote', 'trashNote', 'restoreNote', 'listNoteVersions', 'listTrashedNoteVersions', 'getNoteVersion', 'getTrashedNoteVersion', 'restoreNoteVersion', 'exportNotes', 'importNotes', 'getNoteImport', 'cancelNoteImport', 'purgeNote', 'getNotePurge'].includes(details.operation ?? '') ? details.operation ?? null : null;
     /** The received HTTP status, or null before a response. @type {number|null} */
     this.status = Number.isInteger(details.status) && Number(details.status) >= 100 && Number(details.status) <= 599 ? Number(details.status) : null;
     /** A validated memo REST error code, or null. @type {RestErrorCode|null} */

@@ -18,6 +18,14 @@ Node.js 22.12以降の22系・24系、Chrome・Firefox・Safariの直近2主要�
 
 自動ブラウザ検査の具体的なエンジン版は結果JSONのbrowser-version注釈へ残します。Chromium・Firefox・WebKitのCI成功を実Safariや未実行の過去版の成功として報告しません。
 
+## 0.2.0ライフサイクル追加版の検証
+
+2026-10-15、0.2.0の公開候補ソースで、全JSONメソッド、metadata／由来の検査、ZIPの120秒既定期限と途中取消、80 MiB実測上限、同じtokenでの準備＋PUT、committed準備の再PUT、完全削除pendingの扱いを合成HTTPで検証しました。NodeのネイティブFetchによるstreamアップロードと、一時ディレクトリへの実ファイル保存・部分ファイル除去・再読込によるimport再送も確認しました。実Auth0や公開サービスの新機能はこの試験に含めません。
+
+同じtarballからESM／CommonJS・NodeNext型・TypeDoc・React／Express／M2Mの既存例を検証しています。追加のReact TypeScript helperはブラウザでFileを保持した再送と出力先closeまでの待機を確認します。ChromiumとWebKitは各9件に成功しました。Firefox 157.0も、後述の一時アプリデータ分離で、当初起動に失敗した8件と追加のstream import能力試験1件、合計9件に成功しました。3エンジン合計27件はすべて合成HTTPによる検証です。2026-10-15の[0.2.0候補PR CI](https://github.com/vpwtuj/tadorino-sdk-js/actions/runs/38702635565)では、commit `c1c3540` のNode.js 22.23.3／24.21.0でSDK 93件・Express 4件・M2M 20件と配布検査に成功し、Linux上の3エンジン計27件も成功しました。実Auth0・公開サーバーの追加API・npm 0.2.0・版別Pagesの検証は別途必要です。
+
+同じcommitのpush CIでは、準備処理を8 ms待つ試験が25 msの期限を越え、アップロード前に正しくtimeoutして呼出し回数の期待が外れました。この実時間依存を除くため、import準備→PUTの同一期限とexportのheader後期限を制御時計で検査するよう修正しています。失敗した実行を成功扱いせず、公開対象commitのPR checksで再検証します。
+
 ## GitHub CIの検証
 
 初回の検査に続き、2026-10-14にSDKコードcommit `03b551487249c6a5d636f7b0bdbd2404696b12e5` の[GitHub Actions](https://github.com/vpwtuj/tadorino-sdk-js/actions/runs/38576264732)が成功しました。
@@ -97,4 +105,12 @@ npm trusted publisher登録後の[0.1.1公開workflow](https://github.com/vpwtuj
 
 対象版のnpm配布情報は[npm package](https://www.npmjs.com/package/@bright203/tadorino-sdk-js)、版別文書は[0.1.0](https://vpwtuj.github.io/tadorino-sdk-js/v0.1.0/)を保持し、0.1.2の配置後は `/v0.1.2/` で提供します。公開完了の記録では、取得したtarballとタグの一致、新規利用アプリでの検査、Pagesの `version.json` とnpm版の一致を確認します。文書内のリンクやローカルbuildの成功だけを、公開済みの証拠にはしません。
 
-Firefoxのローカル起動失敗は[PlaywrightのmacOS報告](https://github.com/microsoft/playwright/issues/42768)と[Mozillaのprofile選択の報告](https://bugzilla.mozilla.org/show_bug.cgi?id=2062988)に対応する症状です。SDKの検査をskipして成功と扱う設定は加えていません。
+## Firefoxのローカル起動条件
+
+2026-10-15、macOS 27.0.1 arm64で同一のPlaywright Firefox 157.0を比較しました。通常起動は `Could not find profile folder` で終了し、SDKやページの実行まで到達しません。一方、起動する子プロセスだけの `CFFIXED_USER_HOME` を新規の空一時ディレクトリへ指定すると、起動と合成ページ表示に成功しました。一時profileの置き場所だけを `/tmp` に変える方法では解決しませんでした。
+
+この結果は、Firefoxがprofileとは別に参照するアプリデータ領域とmacOSの保護が原因であるという[Playwrightの報告](https://github.com/microsoft/playwright/issues/42768)と一致します。[Mozillaのprofile選択の修正](https://bugzilla.mozilla.org/show_bug.cgi?id=2062988)はheadless起動失敗時の停止方法を修正したもので、このローカル設定での起動成功を保証するものではありません。
+
+分離条件のまま、失敗していたFirefox8件だけを再実行して8件成功、続いてstream import能力試験だけを実行して1件成功を確認しました。SDKソース・ブラウザバイナリ・OSの権限設定は変更していません。`HOME`や実ユーザーのFirefoxデータも変更せず、合成一時ディレクトリは終了後に削除しました。macOSがその中のLibrary／Downloadsに作成した削除拒否ACLは、この一時ディレクトリ内だけで解除して片付けています。
+
+上の過去の未検証記録は当時の結果として保持します。現在の通常起動ではエラーが再現するため、分離を行わないローカル環境でも成功すると扱いません。検査のskip、ブラウザsandboxの無効化、失敗を成功に置き換える設定は追加していません。実Auth0・公開REST・実Safari・前の主要版・今回のLinux CIは別途検証が必要です。
