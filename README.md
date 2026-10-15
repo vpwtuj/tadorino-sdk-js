@@ -4,7 +4,7 @@
 
 ## 配布とサービス利用
 
-SDKのバージョンは **0.1.0** です。npmの配布名は`@bright203/tadorino-sdk-js`、文書は版ごとに管理します。タドリノの利用にはサービス側の利用許可と本人のAccess Tokenが必要です。パッケージの配布情報とサービスへの接続検証は、それぞれの記録を確認してください。
+このソースのSDKバージョンは **0.1.1** です。npmの配布名は`@bright203/tadorino-sdk-js`、文書は版ごとに管理します。タドリノの利用にはサービス側の利用許可とAccess Tokenが必要です。本人sessionと登録済みの機械主体は、それぞれ別のメモ所有者として扱います。配布状態は[npm](https://www.npmjs.com/package/@bright203/tadorino-sdk-js)、接続の実績は対応環境ガイドで確認してください。
 
 ## インストール
 
@@ -21,7 +21,7 @@ npm ci
 npm run build
 npm pack
 # 利用アプリのディレクトリで:
-npm install /absolute/path/bright203-tadorino-sdk-js-0.1.0.tgz
+npm install /absolute/path/bright203-tadorino-sdk-js-0.1.1.tgz
 ```
 
 ## 保存・検索・取得
@@ -58,15 +58,21 @@ const { TadorinoClient, TadorinoError } = require('@bright203/tadorino-sdk-js');
 
 ## 利用例と文書
 
-- [導入ガイド](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.0/docs/guides/Installation.md): ESM、CommonJS、型宣言、対応環境。
-- [認証ガイド](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.0/docs/guides/Authentication.md): Auth0 SPA、本人session、トークン更新。
-- [保存の再送とエラー](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.0/docs/guides/Errors-and-retries.md): 取消、期限、結果不明時の再送。
-- [React＋Vite＋TypeScript](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.0/docs/guides/React-Vite.md): ブラウザからメモRESTへ接続する例。
-- [対応環境と検証状況](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.0/docs/guides/Compatibility.md): 実際に確認した版と外部検証の範囲。
-- [公開手順](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.0/docs/guides/Publishing.md): 初回CLI公開、版を固定した文書公開、以後のtrusted publishing。
-- [Express](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.0/docs/guides/Express.md): アプリの本人sessionへSDKを組み込む例。
+- [導入ガイド](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.1/docs/guides/Installation.md): ESM、CommonJS、型宣言、対応環境。
+- [認証ガイド](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.1/docs/guides/Authentication.md): Auth0 SPA、本人session、トークン更新。
+- [保存の再送とエラー](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.1/docs/guides/Errors-and-retries.md): 取消、期限、結果不明時の再送。
+- [React＋Vite＋TypeScript](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.1/docs/guides/React-Vite.md): ブラウザからメモRESTへ接続する例。
+- [対応環境と検証状況](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.1/docs/guides/Compatibility.md): 実際に確認した版と外部検証の範囲。
+- [公開手順](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.1/docs/guides/Publishing.md): 初回CLI公開、版を固定した文書公開、以後のtrusted publishing。
+- [Express](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.1/docs/guides/Express.md): アプリの本人sessionへSDKを組み込む例。
 
 APIリファレンスは `src/index.js` のJavaScript＋JSDocからTypeDocで生成します。内部helper、MCP、管理RESTは公開SDKの入口に含みません。
+
+### 機械主体の利用例
+
+`examples/m2m` にReact＋Vite＋TypeScript → localhost Express → SDK → メモRESTの例を追加しています。Node専用のClient Credentials取得helperをバックエンドへ置き、ブラウザへClient Secretや機械のAccess Tokenを返しません。既存の本人OTP例・本人session例も維持しています。
+
+この例は0.1.0からある `getAccessToken` と3操作だけで動作します。Node専用helperとReact/Express例はGitHubのソースで提供し、npmパッケージのexportや実行時依存へ追加していません。[機械主体ガイド](https://github.com/vpwtuj/tadorino-sdk-js/blob/v0.1.1/docs/guides/Machine-to-machine.md)で設定・制約を確認できます。メモサービス側のM2M登録・有効化が別途必要です。
 
 ## 開発と検証
 
@@ -77,14 +83,14 @@ npm ci
 npm run check
 ```
 
-`check` はソースの型検査、ESM/CJS・型宣言の生成、TypeDocの説明・参照検査、Nodeテスト、React build、Expressの並行session、同じtarballを新規アプリへinstallした検証を実行します。掲載例は合成HTTP fixtureで実行し、実Auth0・実DB・実サービス接続の成功として扱いません。
+`check` はソースの型検査、ESM/CJS・型宣言の生成、TypeDocの説明・参照検査、Nodeテスト、React build、Expressの並行sessionと機械provider・安全なローカル入口、同じtarballを新規アプリへinstallした検証を実行します。機械例は公開npm0.1.0を新規installした互換検査も実行します。掲載例は合成HTTP fixtureで実行し、実Auth0・実DB・実サービス接続の成功として扱いません。
 
 ```sh
 npm run docs:build
 npm run docs:check
 npm run dev:vite
 node scripts/fixture-server.mjs
-# 独立したブラウザ検査（ループバックの5173/4010を使用）:
+# 独立したブラウザ検査（ループバックの5173/5174/5181/4010/4011を使用）:
 npx playwright install chromium firefox webkit
 npm run browser:check
 ```

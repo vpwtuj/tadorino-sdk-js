@@ -1,6 +1,6 @@
 {
   "name": "@bright203/tadorino-sdk-js",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Tadorino memo REST client for browsers and Node.js",
   "type": "module",
   "license": "MIT",
@@ -49,7 +49,8 @@
   },
   "workspaces": [
     "examples/vite",
-    "examples/express"
+    "examples/express",
+    "examples/m2m"
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
@@ -57,12 +58,13 @@
     "test": "node --test tests/*.test.js",
     "docs:build": "node scripts/docs.mjs",
     "docs:check": "node scripts/docs.mjs --check",
-    "examples:check": "npm run check --workspace @tadorino/example-vite && npm run check --workspace @tadorino/example-express",
+    "examples:check": "npm run check --workspace @tadorino/example-vite && npm run check --workspace @tadorino/example-express && npm run check --workspace @tadorino/example-m2m",
     "pack:check": "node scripts/check-package.mjs",
     "check": "npm run typecheck && npm run build && npm run docs:check && npm test && npm run examples:check && npm run pack:check",
     "prepack": "npm run build",
     "dev:vite": "npm run dev --workspace @tadorino/example-vite",
-    "browser:check": "playwright test"
+    "browser:check": "playwright test",
+    "dev:m2m": "npm run dev --workspace @tadorino/example-m2m"
   },
   "devDependencies": {
     "@types/node": "24.19.2",

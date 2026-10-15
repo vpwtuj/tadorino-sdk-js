@@ -2,6 +2,8 @@
 
 このガイドはSDKの提供者向けです。npm公開・GitHub Pages公開・利用者の認証許可は別々に確認します。
 
+0.1.0は初回CLI公開済みです。0.1.1のソースは本人用SDK APIを維持し、機械主体の利用例と文書を追加します。次の公開では、下記のtrusted publisher設定と検証済みtarballの一致を確認し、新しい不変tag `v0.1.1` からRelease経路を使います。0.1.0のtag・npm配布物・版別Pagesを上書きしません。公開候補の検査だけでnpm公開済みとは扱いません。
+
 ## 初回のパッケージ公開
 
 まだnpmパッケージが存在しない初回は、所有者の2FAを有効にしたアカウントで、ログイン済みnpm CLIから検証済みtarballを公開します。CLIのログイン情報をリポジトリやログへ貼らず、長期の `NPM_TOKEN` をGitHub Secretsへ登録しません。
@@ -43,7 +45,7 @@ HTTP404・429・5xx・通信中断は待機期限内で再確認します。そ�
 
 ## 以後のtrusted publishing
 
-初回npm公開後、次の新しい版をOIDCで公開する直前にパッケージのSettingsでGitHub Actionsのtrusted publisherを設定します。作成後2日以内に最初の成功した公開が必要で、それを過ぎると設定が期限切れになります。文書だけの配置は、この初回OIDC公開の代わりにはなりません。
+初回npm公開後、次の新しい版をOIDCで公開する直前に、パッケージのSettingsまたは公式 `npm trust` CLIでGitHub Actionsのtrusted publisherを設定します。作成後2日以内に最初の成功した公開が必要で、それを過ぎると設定が期限切れになります。文書だけの配置は、この初回OIDC公開の代わりにはなりません。
 
 | 設定項目 | 値 |
 | --- | --- |
@@ -57,8 +59,20 @@ HTTP404・429・5xx・通信中断は待機期限内で再確認します。そ�
 
 2026-09-03以降に作成するtrusted publisherは、既定では `npm stage publish` が許可されます。このworkflowの直接公開には `npm publish` を別に許可する設定が必要です。stage-onlyの保護を使う方針なら、既存の設定を緩和せず、stagingと所有者の2FA承認を組み込むworkflow変更を先に行います。
 
+CLIでの設定にはnpm11.15以降、既存パッケージの書込権限、所有者の2FAが必要です。次はnpm11.19.0で確認した対象設定です。最初にdry-runで名前・repository・workflow・許可操作を確認し、その後に登録します。公開jobにenvironmentがないため `--environment` は指定しません。[npm trust公式仕様](https://docs.npmjs.com/cli/v11/commands/npm-trust/)
+
+```sh
+npm trust github @bright203/tadorino-sdk-js --file release.yml --repository vpwtuj/tadorino-sdk-js --allow-publish --dry-run
+npm trust github @bright203/tadorino-sdk-js --file release.yml --repository vpwtuj/tadorino-sdk-js --allow-publish --yes
+npm trust list @bright203/tadorino-sdk-js
+```
+
+`--allow-publish` は直接公開のために必須です。`--yes` はCLIの設定確認を省略するだけで、本人のMFAを代行・省略しません。表示された本人認証は所有者がブラウザで完了します。`list` にもMFAを求められる場合があります。自動でブラウザを開かず本人へ操作を引き継ぐ場合は、CLIへ `BROWSER=false` を前置できます。OTP・token・本人認証の一時URLをチャットやリポジトリへ保存しません。dry-runや本人認証待ちを設定完了と扱わず、登録成功と再取得した設定を確認します。
+
 設定の存在や `npm whoami` だけでtrusted publishing検証済みと報告せず、実際の新しい版のOIDC公開が成功した時点で確認します。
 
 以後の新しい安定版はversionを更新し、対応する `vX.Y.Z` タグのGitHub Releaseを公開します。workflowは検証済みtarballのSHAを照合して渡し、短期OIDC認証でnpmへ公開した後、対応版の文書を配置します。prereleaseはこの安定版経路では公開しません。
+
+0.1.1では、SDK checksのNode22/24と本人・機械の3ブラウザエンジン検査が成功したcommitをmainへ取り込み、その同じcommitへtagを作ります。npm側で直接 `npm publish` が許可されたtrusted publisherを確認してからGitHub Releaseを公開します。初のOIDC公開に失敗した場合は設定・期限・workflow名・repository URLを確認し、長期tokenへ切り替えたり既存の2FAを緩めたりしません。uploadが受理されていないことを確認できる場合だけpublish jobを再実行し、既に公開処理中・公開済みなら同じ版を再uploadせず、公開レジストリの確認と文書jobの復旧へ進みます。
 
 npm公開後に文書jobだけが失敗した場合は、失敗したjobの再実行か文書専用の手動実行で復旧します。同じnpm versionの再公開はできないため、初回手動公開済み `v0.1.0` に後からGitHub Releaseを作成して自動npm公開を起動しないでください。初回タグを保持し、次の新しい版からRelease経路を使います。

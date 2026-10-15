@@ -15,7 +15,8 @@ const run = async (cmd, args, cwd) => (await execFileAsync(cmd, args, { cwd, enc
 try {
   const packed = JSON.parse(await run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', temporary], root))[0];
   assert.equal(packed.name, '@bright203/tadorino-sdk-js');
-  assert.equal(packed.version, '0.1.0');
+  const sourceManifest = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+  assert.equal(packed.version, sourceManifest.version);
   for (const { path: file } of packed.files) {
     assert(/^(?:package\.json|README\.md|LICENSE|dist\/index\.(?:js|cjs)|dist\/(?:esm\/[^/]+\.d\.ts|cjs\/[^/]+\.d\.cts))$/.test(file), `Unexpected package file: ${file}`);
   }
@@ -77,7 +78,7 @@ ${types}`);
   await writeFile(path.join(app, 'types.cts'), `import sdk = require('@bright203/tadorino-sdk-js');
 ${types}`);
   await run(process.execPath, [path.join(root, 'node_modules/typescript/bin/tsc'), '--noEmit', '--strict', '--skipLibCheck', '--module', 'NodeNext', '--moduleResolution', 'NodeNext', '--target', 'ES2022', 'types.mts', 'types.cts'], app);
-  for (const name of ['vite', 'express']) {
+  for (const name of ['vite', 'express', 'm2m']) {
     const example = path.join(temporary, name);
     await cp(path.join(root, 'examples', name), example, { recursive: true, filter: source => !/(?:^|\/)(?:node_modules|dist|\.env(?:\..*)?|tsconfig\.tsbuildinfo)(?:\/|$)/.test(source) || source.endsWith('.env.example') });
     const manifest = JSON.parse(await readFile(path.join(example, 'package.json'), 'utf8'));
@@ -88,7 +89,17 @@ ${types}`);
     assert.equal(await readFile(sdkFiles, 'utf8'), await readFile(path.join(installed, 'dist/index.js'), 'utf8'));
     await run('npm', ['run', 'check'], example);
   }
+  // This example uses only the public 0.1.0 API: also test a fresh, exact
+  // registry install rather than accidentally relying on a new source export.
+  const legacy = path.join(temporary, 'm2m-published-0.1.0');
+  await cp(path.join(root, 'examples/m2m'), legacy, { recursive: true, filter: source => !/(?:^|\/)(?:node_modules|dist|\.env(?:\..*)?|tsconfig\.tsbuildinfo)(?:\/|$)/.test(source) || source.endsWith('.env.example') });
+  const legacyManifest = JSON.parse(await readFile(path.join(legacy, 'package.json'), 'utf8'));
+  legacyManifest.dependencies['@bright203/tadorino-sdk-js'] = '0.1.0';
+  await writeFile(path.join(legacy, 'package.json'), JSON.stringify(legacyManifest));
+  await run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', '--registry=https://registry.npmjs.org'], legacy);
+  assert.equal(JSON.parse(await readFile(path.join(legacy, 'node_modules/@bright203/tadorino-sdk-js/package.json'), 'utf8')).version, '0.1.0');
+  await run('npm', ['run', 'check'], legacy);
   await mkdir(path.join(root, '.artifacts'), { recursive: true });
-  await writeFile(path.join(root, '.artifacts/package-verification.json'), JSON.stringify({ package: packed.name, version: packed.version, tarballSha256: digest, node: process.version, esm: true, commonjs: true, nodeNextTypes: true, readmeExample: true, reactViteBuild: true, expressSessionFixture: true, syntheticOnly: true }, null, 2) + '\n');
-  console.log(`Packed SDK ${packed.version}: ESM, CommonJS, NodeNext types, README, React/Vite and Express verified from one tarball.`);
+  await writeFile(path.join(root, '.artifacts/package-verification.json'), JSON.stringify({ package: packed.name, version: packed.version, tarballSha256: digest, node: process.version, esm: true, commonjs: true, nodeNextTypes: true, readmeExample: true, reactViteBuild: true, expressSessionFixture: true, machineExample: true, publishedVersionCompatibility: '0.1.0', syntheticOnly: true }, null, 2) + '\n');
+  console.log(`Packed SDK ${packed.version}: ESM, CommonJS, NodeNext types, README, React/Vite, user-session Express and local M2M examples verified from one tarball.`);
 } finally { await rm(temporary, { recursive: true, force: true }); }

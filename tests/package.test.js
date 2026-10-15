@@ -6,7 +6,15 @@ const root = new URL('../', import.meta.url);
 test('public packaging has branch-correct declarations and no mandatory runtime dependencies', async () => {
   const manifest = JSON.parse(await readFile(new URL('package.json', root), 'utf8'));
   assert.equal(manifest.name, '@bright203/tadorino-sdk-js');
-  assert.equal(manifest.version, '0.1.0');
+  assert.match(manifest.version, /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/);
+  assert.equal(manifest.version, manifest.version.trim());
+  const lock = JSON.parse(await readFile(new URL('package-lock.json', root), 'utf8'));
+  assert.equal(lock.version, manifest.version);
+  assert.equal(lock.packages[''].version, manifest.version);
+  const readme = await readFile(new URL('README.md', root), 'utf8');
+  assert(readme.includes(`**${manifest.version}**`));
+  const changes = await readFile(new URL('CHANGELOG.md', root), 'utf8');
+  assert(changes.includes(`## ${manifest.version}`));
   assert.equal(manifest.dependencies, undefined);
   assert.deepEqual(Object.keys(manifest.exports), ['.']);
   assert.equal(manifest.exports['.'].import.default, './dist/index.js');
