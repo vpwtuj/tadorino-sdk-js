@@ -83,13 +83,15 @@ Chromium 156.0.8078.4・Playwright WebKit 27.2では、本人例と機械例の�
 
 09:10:42 JSTまでにClient ID交換の実測も成功しました。未登録の新clientは401となり、停止中の同じ機械IDへ交換した後も停止中は401、再開後は新clientから元メモ・同一キー再送が成功しました。旧clientの有効期限内JWTは401となり、メモの所有者IDは維持されました。管理対象・本人対応も旧側を停止すると旧操作が404となり、新対象の登録後は本人CLIからrecover・receiptが成功しました。これらは提供側で明示した登録・停止・交換の結果であり、SDKが所有者やclient対応を変更するものではありません。
 
-Windows上の実アプリ、実Safari、今回変更後の新たな本人MCP再回帰は、この実接続記録の成功範囲に含めません。実接続とnpm・Pagesの配布状態は別に確認します。
+2026-10-15、本人の新しいメールOTPログインとPKCEによる実JWT取得を経由し、公開メモRESTの保存201、同一キー再送・検索・全文取得200を確認しました。MCPからも同じメモを検索し、全文の一致を確認しています。本人のメモ用tokenを管理RESTへ送ると401となり、検証用に追加したcallbackも元へ戻しました。この本人回帰を、過去の実績や合成CIとは別の今回の実接続結果として記録します。
 
-### 0.1.1の公開失敗と0.1.2候補
+Windows上の実アプリ、実Safari・前の主要ブラウザ版は、この実接続記録の成功範囲に含めません。実接続とnpm・Pagesの配布状態は別に確認します。
+
+### 0.1.1の公開失敗と0.1.2の修正
 
 npm trusted publisher登録後の[0.1.1公開workflow](https://github.com/vpwtuj/tadorino-sdk-js/actions/runs/38661095479)はcheck成功、publish失敗でした。npmが相対tarballパスをGitHub shorthandと解釈し、`git ls-remote` が終了コード128となったため、アップロード成功はありません。exact0.1.1のpublic registryと版別Pagesは404、latestは0.1.0のままであることを確認しました。不変tag `v0.1.1` は移動・削除せず保持します。
 
-0.1.2はSDK runtimeを変えず、ローカルパスを明示した公開コマンドと同経路の実npm dry-run検査を追加します。dry-runやtrusted publisherの設定成功を、公開済みtarball・OIDC provenanceの検証成功と扱いません。0.1.2の公開結果は、実際のregistry・Pagesの取得後に確認します。
+0.1.2はSDK runtimeを変えず、ローカルパスを明示した公開コマンドと同経路の実npm dry-run検査を追加します。dry-runやtrusted publisherの設定成功を、公開済みtarball・OIDC provenanceの検証成功と扱いません。配布状態は[npm](https://www.npmjs.com/package/@bright203/tadorino-sdk-js)、[GitHub Release](https://github.com/vpwtuj/tadorino-sdk-js/releases)、実際の版別Pagesを確認します。
 
 合成HTTP・ローカル実DB・公開開発サービスの各検証は、上記の環境と範囲で区別して記録します。npmの配布確認とGitHub Pagesの配置・閲覧確認も、それぞれの完了条件として扱います。
 
