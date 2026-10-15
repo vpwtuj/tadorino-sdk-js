@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { createServer } from 'node:http';
 import { startFixture } from './fixture-server.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -28,14 +29,36 @@ try {
   await mkdir(publicationDirectory);
   await cp(tarball, path.join(publicationDirectory, packed.filename));
   assert.equal((await readdir(publicationDirectory)).length, 1);
-  const emptyConfig = path.join(temporary, 'empty-publish.npmrc');
-  await writeFile(emptyConfig, '');
-  const previewOutput = JSON.parse(await run('npm', ['publish', `./release-package/${packed.filename}`, '--dry-run', '--ignore-scripts', '--access', 'public', '--json', '--userconfig', emptyConfig], temporary));
-  // npm 11 keys publish previews by package name; older CLI output can be a
-  // single manifest or an array. All forms must identify this exact archive.
-  const preview = Array.isArray(previewOutput) ? previewOutput[0] : previewOutput[packed.name] ?? previewOutput;
-  assert.equal(preview.name, packed.name); assert.equal(preview.version, packed.version);
-  assert.equal(preview.integrity, packed.integrity);
+  const userConfig = path.join(temporary, 'empty-publish-user.npmrc');
+  const globalConfig = path.join(temporary, 'empty-publish-global.npmrc');
+  await Promise.all([writeFile(userConfig, ''), writeFile(globalConfig, '')]);
+  // Dry-run still checks registry versions. Use a new empty cache and offline
+  // mode so this parser/archive check also works after this version is public.
+  // A loopback tripwire makes accidental registry traffic a test failure.
+  const requests = [];
+  const registry = createServer((req, res) => { requests.push({ method: req.method, path: req.url }); res.writeHead(500); res.end(); });
+  await new Promise((resolve, reject) => { registry.once('error', reject); registry.listen(0, '127.0.0.1', resolve); });
+  const registryUrl = `http://127.0.0.1:${registry.address().port}`;
+  const previewEnv = Object.fromEntries(['PATH', 'HOME', 'TMPDIR', 'SystemRoot', 'WINDIR'].filter(key => process.env[key] !== undefined).map(key => [key, process.env[key]]));
+  // No inherited npm auth, scoped registry configuration or CI OIDC tokens.
+  // A path regression must also fail before Git can use SSH credentials.
+  Object.assign(previewEnv, { GIT_SSH_COMMAND: 'false', GIT_TERMINAL_PROMPT: '0', GIT_CONFIG_GLOBAL: globalConfig, GIT_CONFIG_NOSYSTEM: '1' });
+  try {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const { stdout } = await execFileAsync('npm', ['publish', `./release-package/${packed.filename}`, '--dry-run', '--ignore-scripts', '--access', 'public', '--json',
+        '--offline', '--no-update-notifier', '--cache', path.join(temporary, 'publish-cache'), '--registry', registryUrl, '--userconfig', userConfig, '--globalconfig', globalConfig],
+      { cwd: temporary, env: previewEnv, encoding: 'utf8', timeout: 30_000, maxBuffer: 2 * 1024 * 1024 });
+      const previewOutput = JSON.parse(stdout);
+      // npm 11 keys previews by name; older CLI output can be one manifest or
+      // an array. Each form must describe this exact unmodified archive.
+      const preview = Array.isArray(previewOutput) ? previewOutput[0] : previewOutput[packed.name] ?? previewOutput;
+      assert.equal(preview.name, packed.name); assert.equal(preview.version, packed.version); assert.equal(preview.integrity, packed.integrity);
+    }
+  } finally {
+    registry.closeAllConnections();
+    await new Promise((resolve, reject) => registry.close(error => error ? reject(error) : resolve()));
+  }
+  assert.deepEqual(requests, [], 'Offline CLI validation must not contact a registry or upload.');
   assert.equal(createHash('sha256').update(await readFile(path.join(publicationDirectory, packed.filename))).digest('hex'), digest);
   const app = path.join(temporary, 'consumer');
   await mkdir(app);
@@ -115,6 +138,6 @@ ${types}`);
   assert.equal(JSON.parse(await readFile(path.join(legacy, 'node_modules/@bright203/tadorino-sdk-js/package.json'), 'utf8')).version, '0.1.0');
   await run('npm', ['run', 'check'], legacy);
   await mkdir(path.join(root, '.artifacts'), { recursive: true });
-  await writeFile(path.join(root, '.artifacts/package-verification.json'), JSON.stringify({ package: packed.name, version: packed.version, tarballSha256: digest, node: process.version, npmPublishDryRun: true, esm: true, commonjs: true, nodeNextTypes: true, readmeExample: true, reactViteBuild: true, expressSessionFixture: true, machineExample: true, publishedVersionCompatibility: '0.1.0', syntheticOnly: true }, null, 2) + '\n');
+  await writeFile(path.join(root, '.artifacts/package-verification.json'), JSON.stringify({ package: packed.name, version: packed.version, tarballSha256: digest, node: process.version, npmPublishDryRun: true, npmPublishDryRunOffline: true, npmPublishDryRunAttempts: 2, npmPublishDryRunRegistryRequests: requests.length, esm: true, commonjs: true, nodeNextTypes: true, readmeExample: true, reactViteBuild: true, expressSessionFixture: true, machineExample: true, publishedVersionCompatibility: '0.1.0', syntheticOnly: true }, null, 2) + '\n');
   console.log(`Packed SDK ${packed.version}: ESM, CommonJS, NodeNext types, README, React/Vite, user-session Express and local M2M examples verified from one tarball.`);
 } finally { await rm(temporary, { recursive: true, force: true }); }
