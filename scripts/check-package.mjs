@@ -105,6 +105,22 @@ const client = new TadorinoClient({ baseUrl: ${JSON.stringify(fixture.baseUrl)},
 void client.createNote({ title: 'type', body: 'synthetic', idempotency_key: 'key' });
 void client.searchNotes({ query: 'type' });
 void client.getNote('id', { signal: new AbortController().signal });
+const mutation: sdk.NoteMutationInput = { note_id: 'id', expected_revision: 1, idempotency_key: 'key' };
+void client.updateNote({ ...mutation, body: 'original' });
+void client.archiveNote(mutation); void client.trashNote(mutation); void client.restoreNote(mutation);
+void client.listNotes({state:'trashed',cursor:'opaque'});
+void client.getNoteVersion({note_id:'id',version:1});
+void client.listNoteVersions({note_id:'id'});
+void client.exportNotes({include_history:true}).then(result => result.stream.cancel());
+void client.importNotes({archive:new Uint8Array(),idempotency_key:'key'});
+void client.getNoteImport('id'); void client.cancelNoteImport('id');
+void client.purgeNote(mutation); void client.getNotePurge('id');
+// @ts-expect-error unknown state is rejected
+void client.listNotes({state:'all'});
+// @ts-expect-error binary import requires archive
+void client.importNotes({idempotency_key:'key'});
+// @ts-expect-error revision is required
+void client.updateNote({note_id:'id',body:'original',idempotency_key:'key'});
 // @ts-expect-error title must be a string
 void client.createNote({ title: 42, body: 'synthetic', idempotency_key: 'key' });
 // @ts-expect-error no invented public method

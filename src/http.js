@@ -1,5 +1,5 @@
 import { ERROR_CODES, TadorinoError, safeRequestId } from './errors.js';
-import { projectResult } from './validation.js';
+import { projectLifecycle } from './lifecycle-validation.js';
 
 /** @internal */
 export const RESPONSE_LIMIT = 1024 * 1024;
@@ -115,12 +115,12 @@ async function boundedBody(response, context) {
  * @internal
  * @param {Response} response
  * @param {OperationContext} context
- * @param {'createNote'|'searchNotes'|'getNote'} operation
- * @param {number} limit
- * @param {string|null} requestedId
- * @returns {Promise<import('./client.js').CreateNoteResult|import('./client.js').SearchNotesResult|import('./client.js').GetNoteResult>}
+ * @param {Operation} operation
+ * @param {import('./lifecycle-validation.js').RequestPlan} plan
+ * @param {number[]} [allowedStatuses]
+ * @returns {Promise<unknown>}
  */
-export async function parseResponse(response, context, operation, limit, requestedId) {
+export async function parseResponse(response, context, operation, plan, allowedStatuses = operation === 'createNote' ? [200,201] : [200]) {
   if (!(response instanceof Response) || response.status < 100) throw context.error('network');
   context.status = response.status;
   context.requestId = safeRequestId(response.headers.get('X-Request-ID'));
@@ -141,7 +141,7 @@ export async function parseResponse(response, context, operation, limit, request
     }
     throw context.error('http', code);
   }
-  if (overflow || !json || (operation === 'createNote' ? ![200, 201].includes(response.status) : response.status !== 200)) throw context.error('invalid_response');
-  try { return projectResult(data, operation, response.status, limit, requestedId); }
+  if (overflow || !json || !allowedStatuses.includes(response.status)) throw context.error('invalid_response');
+  try { return projectLifecycle(data, operation, response.status, plan); }
   catch { throw context.error('invalid_response'); }
 }

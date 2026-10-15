@@ -34,7 +34,7 @@ export function origin(value) {
 }
 
 /** @param {unknown} value @returns {unknown[]} */
-function inputArray(value) {
+export function inputArray(value) {
   if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype || 'toJSON' in value) throw new Error('array');
   const keys = Reflect.ownKeys(value);
   if (keys.length !== value.length + 1 || keys.some(key => typeof key !== 'string' || (key !== 'length' && !/^(?:0|[1-9]\d*)$/.test(key)))) throw new Error('array');
@@ -106,20 +106,20 @@ export function requestOptions(value, defaultTimeout) {
 }
 
 /** @param {unknown} value @returns {Record<string, unknown>} */
-function resultObject(value) {
+export function resultObject(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('shape');
   return /** @type {Record<string, unknown>} */ (value);
 }
 
 /** @param {unknown} value @param {number} maximum @param {number} [minimum] @returns {string} */
-function resultString(value, maximum, minimum = 0) {
+export function resultString(value, maximum, minimum = 0) {
   if (typeof value !== 'string' || [...value].length < minimum || [...value].length > maximum
     || value.includes('\0') || /[\uD800-\uDFFF]/u.test(value)) throw new Error('string');
   return value;
 }
 
 /** @param {unknown} value @returns {string} */
-function resultTimestamp(value) {
+export function resultTimestamp(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|\+00:00)$/.test(value)) throw new Error('date');
   const parsed = new Date(value);
   if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 19) !== value.slice(0, 19)) throw new Error('date');
@@ -133,7 +133,7 @@ function summary(raw) {
 }
 
 /** @param {unknown} value @returns {import('./client.js').Source} */
-function resultSource(value) {
+export function resultSource(value) {
   const source = resultObject(value);
   /** @type {import('./client.js').Source} */
   const result = {};

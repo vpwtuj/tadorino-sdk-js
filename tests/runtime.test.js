@@ -80,7 +80,7 @@ test('invalid input and options are rejected asynchronously without token or fet
   const getter = { ...SAVE }; Object.defineProperty(getter, 'title', { enumerable: true, get() { throw new Error('LEAK'); } }); invalidCreates.push(getter);
   const symbol = { ...SAVE, [Symbol('unknown')]: 'LEAK' }; invalidCreates.push(symbol);
   for (const input of invalidCreates) await assert.rejects(sdk.createNote(input), expectError('input', 'createNote'));
-  for (const input of [null, {}, { query: 1 }, { query: 'x', limit: 0 }, { query: 'x', limit: 21 }, { query: 'x', limit: 1.5 }, { query: 'x', limit: '1' }, { query: 'x', cursor: 'LEAK' }, { query: 'x', limit: Infinity }]) await assert.rejects(sdk.searchNotes(input), expectError('input', 'searchNotes'));
+  for (const input of [null, {}, { query: 1 }, { query: 'x', limit: 0 }, { query: 'x', limit: 21 }, { query: 'x', limit: 1.5 }, { query: 'x', limit: '1' }, { query: 'x', cursor: '' }, { query: 'x', limit: Infinity }]) await assert.rejects(sdk.searchNotes(input), expectError('input', 'searchNotes'));
   for (const id of [KEY.replace('-4222-', '-1222-'), undefined, 1, `${ID}?x=1`]) await assert.rejects(sdk.getNote(id), expectError('input', 'getNote'));
   for (const options of [null, [], { arbitrary: true }, { timeoutMs: 0 }, { timeoutMs: '1' }, { signal: {} }, { signal: undefined }]) await assert.rejects(sdk.getNote(ID, options), expectError('input', 'getNote'));
   assert.equal(calls, 0);
