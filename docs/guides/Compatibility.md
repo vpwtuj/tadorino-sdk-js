@@ -18,9 +18,9 @@ Node.js 22.12以降の22系・24系、Chrome・Firefox・Safariの直近2主要�
 
 自動ブラウザ検査の具体的なエンジン版は結果JSONのbrowser-version注釈へ残します。Chromium・Firefox・WebKitのCI成功を実Safariや未実行の過去版の成功として報告しません。
 
-## ライフサイクル追加版のローカル検証
+## 0.2.0ライフサイクル追加版の検証
 
-2026-10-15、未公開の追加ソースで、全JSONメソッド、metadata／由来の検査、ZIPの120秒既定期限と途中取消、80 MiB実測上限、同じtokenでの準備＋PUT、committed準備の再PUT、完全削除pendingの扱いを合成HTTPで検証しました。NodeのネイティブFetchによるstreamアップロードと、一時ディレクトリへの実ファイル保存・部分ファイル除去・再読込によるimport再送も確認しました。実Auth0や公開サービスの新機能はこの試験に含めません。
+2026-10-15、0.2.0の公開候補ソースで、全JSONメソッド、metadata／由来の検査、ZIPの120秒既定期限と途中取消、80 MiB実測上限、同じtokenでの準備＋PUT、committed準備の再PUT、完全削除pendingの扱いを合成HTTPで検証しました。NodeのネイティブFetchによるstreamアップロードと、一時ディレクトリへの実ファイル保存・部分ファイル除去・再読込によるimport再送も確認しました。実Auth0や公開サービスの新機能はこの試験に含めません。
 
 同じtarballからESM／CommonJS・NodeNext型・TypeDoc・React／Express／M2Mの既存例を検証しています。追加のReact TypeScript helperはブラウザでFileを保持した再送と出力先closeまでの待機を確認します。ChromiumとWebKitは各9件に成功しました。Firefox 157.0も、後述の一時アプリデータ分離で、当初起動に失敗した8件と追加のstream import能力試験1件、合計9件に成功しました。3エンジン合計27件はすべて合成HTTPによる検証です。今回の変更のLinux CIはまだ実行していません。既存のCI成功を今回の追加APIの成功として扱いません。
 
