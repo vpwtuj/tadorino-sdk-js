@@ -22,7 +22,9 @@ Node.js 22.12以降の22系・24系、Chrome・Firefox・Safariの直近2主要�
 
 2026-10-15、0.2.0の公開候補ソースで、全JSONメソッド、metadata／由来の検査、ZIPの120秒既定期限と途中取消、80 MiB実測上限、同じtokenでの準備＋PUT、committed準備の再PUT、完全削除pendingの扱いを合成HTTPで検証しました。NodeのネイティブFetchによるstreamアップロードと、一時ディレクトリへの実ファイル保存・部分ファイル除去・再読込によるimport再送も確認しました。実Auth0や公開サービスの新機能はこの試験に含めません。
 
-同じtarballからESM／CommonJS・NodeNext型・TypeDoc・React／Express／M2Mの既存例を検証しています。追加のReact TypeScript helperはブラウザでFileを保持した再送と出力先closeまでの待機を確認します。ChromiumとWebKitは各9件に成功しました。Firefox 157.0も、後述の一時アプリデータ分離で、当初起動に失敗した8件と追加のstream import能力試験1件、合計9件に成功しました。3エンジン合計27件はすべて合成HTTPによる検証です。今回の変更のLinux CIはまだ実行していません。既存のCI成功を今回の追加APIの成功として扱いません。
+同じtarballからESM／CommonJS・NodeNext型・TypeDoc・React／Express／M2Mの既存例を検証しています。追加のReact TypeScript helperはブラウザでFileを保持した再送と出力先closeまでの待機を確認します。ChromiumとWebKitは各9件に成功しました。Firefox 157.0も、後述の一時アプリデータ分離で、当初起動に失敗した8件と追加のstream import能力試験1件、合計9件に成功しました。3エンジン合計27件はすべて合成HTTPによる検証です。2026-10-15の[0.2.0候補PR CI](https://github.com/vpwtuj/tadorino-sdk-js/actions/runs/38702635565)では、commit `c1c3540` のNode.js 22.23.3／24.21.0でSDK 93件・Express 4件・M2M 20件と配布検査に成功し、Linux上の3エンジン計27件も成功しました。実Auth0・公開サーバーの追加API・npm 0.2.0・版別Pagesの検証は別途必要です。
+
+同じcommitのpush CIでは、準備処理を8 ms待つ試験が25 msの期限を越え、アップロード前に正しくtimeoutして呼出し回数の期待が外れました。この実時間依存を除くため、import準備→PUTの同一期限とexportのheader後期限を制御時計で検査するよう修正しています。失敗した実行を成功扱いせず、公開対象commitのPR checksで再検証します。
 
 ## GitHub CIの検証
 

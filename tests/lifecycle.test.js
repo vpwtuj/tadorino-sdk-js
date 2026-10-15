@@ -90,20 +90,35 @@ test('import uses one token, keeps exact bytes, and always uploads after a commi
   }
 });
 
-test('import deadline spans preparation and upload; preparation failures never upload',async()=>{
+test('import deadline spans preparation and upload; preparation failures never upload',async t=>{
+  let now=0;const timers=[];
+  t.mock.method(Date,'now',()=>now);
+  t.mock.method(globalThis,'setTimeout',(callback,delay)=>{timers.push({callback,delay});return 0;});
   let calls=0;let cancelled=false;
   const source=new ReadableStream({pull(){return new Promise(()=>{});},cancel(){cancelled=true;}});
-  const client=sdk(async(_url,init)=>{calls++;if(calls===1){await new Promise(r=>setTimeout(r,8));return json(prepared,201);}await new Response(init.body).arrayBuffer();return json(committed);});
+  const client=sdk(async(_url,init)=>{
+    calls++;
+    if(calls===1){now=8;return json(prepared,201);}
+    assert.equal(now,8);assert.equal(timers.length,1);assert.equal(timers[0].delay,25);
+    const reading=new Response(init.body).arrayBuffer();
+    now=25;timers[0].callback();
+    await reading;return json(committed);
+  });
   await assert.rejects(client.importNotes({archive:source,idempotency_key:key},{timeoutMs:25}),failure('timeout','importNotes'));
   assert.equal(calls,2);assert.equal(cancelled,true);
   calls=0;await assert.rejects(sdk(()=>{calls++;return json({error:{code:'note_purged',message:'gone'}},410);}).importNotes({archive:new Blob(),idempotency_key:key}),failure('http','importNotes'));assert.equal(calls,1);
 });
 
-test('export deadline remains active after headers even when caller leaves the stream unread',async()=>{
+test('export deadline remains active after headers even when caller leaves the stream unread',async t=>{
+  let now=0;const timers=[];
+  t.mock.method(Date,'now',()=>now);
+  t.mock.method(globalThis,'setTimeout',(callback,delay)=>{timers.push({callback,delay});return 0;});
   let cancelled=false;
   const client=sdk(()=>new Response(new ReadableStream({cancel(){cancelled=true;}}),{headers:{'Content-Type':'application/zip'}}));
   const result=await client.exportNotes({}, {timeoutMs:20});assert.equal(result.filename,'tadorino-export.zip');
-  await new Promise(r=>setTimeout(r,35));assert.equal(cancelled,true);await assert.rejects(result.stream.getReader().read(),failure('timeout','exportNotes'));
+  assert.equal(cancelled,false);assert.equal(timers.length,1);assert.equal(timers[0].delay,20);
+  now=20;timers[0].callback();
+  assert.equal(cancelled,true);await assert.rejects(result.stream.getReader().read(),failure('timeout','exportNotes'));
 });
 
 test('export handles EOF, actual-byte overflow, cancellation and interrupted bodies safely',async()=>{
