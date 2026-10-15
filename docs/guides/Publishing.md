@@ -10,6 +10,8 @@
 
 0.1.1の不変tagを動かさず、0.1.2で `npm publish ./release-package/*.tgz --access public --provenance` に修正します。check jobは検証済みSHAと同じtarballに `npm publish ./release-package/*.tgz --dry-run --ignore-scripts --access public` を実行し、実CLIがローカルファイルとして読めることを先に検査します。dry-runはuploadやOIDC公開の成功を証明しません。修正後も、publish受理後に同じversionを再uploadしてはいけません。
 
+公開後も繰り返す `pack:check` は、同じローカルtarballパスを実npm CLIのoffline dry-runで2回検査します。専用の空cache・空user/global設定・認証情報やOIDCを渡さない子環境を使い、loopback registryへの要求が0件であることも検査します。npmのdry-runは通常、公開済みの同じversionを拒否するため、ここではレジストリの公開可否判定からファイル解析とSHA/SRIの照合を分けています。本番の公開許可・既存版保護を緩める処理や新しいnpm公開は行いません。0.1.2の不変tag・配布物も変更しません。
+
 ## 初回のパッケージ公開
 
 まだnpmパッケージが存在しない初回は、所有者の2FAを有効にしたアカウントで、ログイン済みnpm CLIから検証済みtarballを公開します。CLIのログイン情報をリポジトリやログへ貼らず、長期の `NPM_TOKEN` をGitHub Secretsへ登録しません。
