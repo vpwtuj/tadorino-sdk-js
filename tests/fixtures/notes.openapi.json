@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Tadorino Memo REST API",
-    "version": "1.0.0",
-    "description": "## はじめに\n\nメモを保存・検索・取得するAPIです。MCPと同じメモと所有者・再送キーを共有します。下の各操作に合成データの使用例があります。\n\n## 認証と権限\n\nAuth0でタドリノにログインし、既存のMCP_RESOURCE_URLをaudienceとするアクセストークンを取得します。保存はnotes:write、検索・取得はnotes:readが必要です。Authorization: Bearer <access_token>で送信します。Client SecretはBearerトークンとして使いません。\n\nトークン発行・更新はAuth0のOAuthフローで行います。このAPIにはログイン・更新用エンドポイントはありません。期限切れ時は、クライアントが認可されたRefresh TokenでAuth0の/oauth/tokenから更新するか、再ログインします。issuer・audience・クライアント設定は利用する環境に合わせてください。\n\n## 機械による操作（M2M）\n\n環境でMACHINE_ACCESS_ENABLED=trueとし、提供側に登録されたメモ用M2M clientは、サーバー側でAuth0 Client Credentials＋Client Secretからメモ用Access Tokenを取得できます。期限後は同じgrantで再取得し、Refresh Tokenは使いません。資格情報・機械tokenをブラウザへ渡さないでください。初版はAuth0 token profileのgty・azp・subを照合します。別token profileの機械claimは許可しません。\n\n機械は固定機械IDのメモ領域を所有し、Client ID交換後もメモと再送履歴を引き継ぎます。同じM2M接続を使う人同士の関係・閲覧権限は利用アプリのバックエンドが管理します。停止完了後の新規操作は発行済みtokenでも拒否され、既に処理中の操作は完了し得ます。M2M tokenはMCP・Secret管理RESTで使えません。Secret管理は人のOTPで既存管理CLIへログインして行います。\n\n## 保存と再送\n\n保存のたびに新しいidempotency_key（UUID）を用意します。応答が不明な場合は同じキーと同じ内容で再送してください。初回は201/created=true、同一再送は200/created=false、同じキーで内容が違えば409です。掲載例の固定キーを別の保存に使い回さないでください。\n\n## HTTPの条件\n\nServer origin is deployment-specific; relative server URL uses this server. Paths are case-sensitive without trailing-slash aliases. Query parameters and nonempty GET bodies are rejected. HTTP body limit is 1 MiB, logical JSON arguments 256 KiB. String limits count Unicode code points; domain semantic parsing is authoritative. API successes and errors include no-store and a server-generated request ID.\n\n## ブラウザからの接続\n\nCross-origin browser access is opt-in via NOTES_ALLOWED_ORIGINS_JSON (omitted/[] disables it). Only exact configured origins and the three memo paths/methods are enabled. HTTPS origins or explicit development HTTP localhost/127.0.0.1/[::1] origins with fixed ports are accepted; local auth permits only those HTTP loopback origins and retains loopback binding. Valid OPTIONS preflight requires an allowed Host/Origin, the route’s POST or GET method, and only Authorization/Content-Type/Accept request headers; it returns 204 without Bearer or storage access. Authentication and scope errors on allowed actual requests remain readable. X-Request-ID is exposed. Credentials, wildcard origins, redirects, route aliases and query strings are not allowed. MCP, management REST and Host policies are unchanged."
+    "version": "1.1.0",
+    "description": "## はじめに\n\nメモを保存・検索・取得するAPIです。MCPと同じメモと所有者・再送キーを共有します。下の各操作に合成データの使用例があります。\n\n## 認証と権限\n\nAuth0でタドリノにログインし、既存のMCP_RESOURCE_URLをaudienceとするアクセストークンを取得します。保存はnotes:write、検索・取得はnotes:readが必要です。Authorization: Bearer <access_token>で送信します。Client SecretはBearerトークンとして使いません。\n\nトークン発行・更新はAuth0のOAuthフローで行います。このAPIにはログイン・更新用エンドポイントはありません。期限切れ時は、クライアントが認可されたRefresh TokenでAuth0の/oauth/tokenから更新するか、再ログインします。issuer・audience・クライアント設定は利用する環境に合わせてください。\n\n## 機械による操作（M2M）\n\n環境でMACHINE_ACCESS_ENABLED=trueとし、提供側に登録されたメモ用M2M clientは、サーバー側でAuth0 Client Credentials＋Client Secretからメモ用Access Tokenを取得できます。期限後は同じgrantで再取得し、Refresh Tokenは使いません。資格情報・機械tokenをブラウザへ渡さないでください。初版はAuth0 token profileのgty・azp・subを照合します。別token profileの機械claimは許可しません。\n\n機械は固定機械IDのメモ領域を所有し、Client ID交換後もメモと再送履歴を引き継ぎます。同じM2M接続を使う人同士の関係・閲覧権限は利用アプリのバックエンドが管理します。停止完了後の新規操作は発行済みtokenでも拒否され、既に処理中の操作は完了し得ます。M2M tokenはMCP・Secret管理RESTで使えません。Secret管理は人のOTPで既存管理CLIへログインして行います。\n\n## 編集・整理・履歴\n\n編集はnotes:update、アーカイブ・ゴミ箱・復元はnotes:organizeが必要です。トークンscopeに加えて所有者×Client IDの現在の許可を確認します。変更はexpected_revisionとUUIDv4のidempotency_keyを指定し、成功再送は同じ結果を返します。全内容履歴を保持し、過去版復元も新しい版を作ります。\n\n検索・一覧は既定でactiveだけを返し、stateでarchived、active_and_archived、trashedを選べます。ゴミ箱の本文と履歴は専用経路で取得します。cursorは同じ所有者・条件で24時間以内に使います。完全削除はこの版では有効化していません。\n\n## 移行用の入出力\n\nnotes:exportでMarkdownとJSONの版付きZIPを取得し、notes:importで別の所有者・環境へ新しいIDでコピーできます。既存メモは上書きしません。importの準備・ZIP送信・状態確認を分け、結果が不明なときは同じ操作IDで確認します。ZIPは通信80MiB・展開64MiB・1000メモ・10000版・120秒を上限とします。\n\n## 保存と再送\n\n保存のたびに新しいidempotency_key（UUID）を用意します。応答が不明な場合は同じキーと同じ内容で再送してください。初回は201/created=true、同一再送は200/created=false、同じキーで内容が違えば409です。掲載例の固定キーを別の保存に使い回さないでください。\n\n## HTTPの条件\n\nServer origin is deployment-specific; relative server URL uses this server. Paths are case-sensitive without trailing-slash aliases. Query parameters and nonempty GET bodies are rejected. HTTP body limit is 1 MiB, logical JSON arguments 256 KiB. String limits count Unicode code points; domain semantic parsing is authoritative. API successes and errors include no-store and a server-generated request ID.\n\n## ブラウザからの接続\n\nCross-origin browser access is opt-in via NOTES_ALLOWED_ORIGINS_JSON (omitted/[] disables it). Only exact configured origins and the memo paths/methods enabled in this deployment are allowed. HTTPS origins or explicit development HTTP localhost/127.0.0.1/[::1] origins with fixed ports are accepted; local auth permits only those HTTP loopback origins and retains loopback binding. Valid OPTIONS preflight requires an allowed Host/Origin, one of the route’s enabled methods, and only Authorization/Content-Type/Accept request headers; it returns 204 without Bearer or storage access. Authentication and scope errors on allowed actual requests remain readable. X-Request-ID is exposed. Credentials, wildcard origins, redirects, route aliases and query strings are not allowed. MCP, management REST and Host policies are unchanged."
   },
   "servers": [
     {
@@ -32,8 +32,88 @@
         "method": "POST"
       },
       {
+        "path": "/v1/notes/list",
+        "method": "POST"
+      },
+      {
         "path": "/v1/notes/{note_id}",
         "method": "GET"
+      },
+      {
+        "path": "/v1/notes/{note_id}",
+        "method": "PATCH"
+      },
+      {
+        "path": "/v1/notes/{note_id}/archive",
+        "method": "POST"
+      },
+      {
+        "path": "/v1/notes/{note_id}/unarchive",
+        "method": "POST"
+      },
+      {
+        "path": "/v1/notes/{note_id}/trash",
+        "method": "POST"
+      },
+      {
+        "path": "/v1/notes/{note_id}/trash",
+        "method": "GET"
+      },
+      {
+        "path": "/v1/notes/{note_id}/restore",
+        "method": "POST"
+      },
+      {
+        "path": "/v1/notes/{note_id}/versions/list",
+        "method": "POST"
+      },
+      {
+        "path": "/v1/notes/{note_id}/trash/versions/list",
+        "method": "POST"
+      },
+      {
+        "path": "/v1/notes/{note_id}/versions/{version}",
+        "method": "GET"
+      },
+      {
+        "path": "/v1/notes/{note_id}/trash/versions/{version}",
+        "method": "GET"
+      },
+      {
+        "path": "/v1/notes/{note_id}/versions/{version}/restore",
+        "method": "POST"
+      },
+      {
+        "path": "/v1/notes/export",
+        "method": "POST"
+      },
+      {
+        "path": "/v1/note-imports",
+        "method": "POST"
+      },
+      {
+        "path": "/v1/note-imports/{import_id}/archive",
+        "method": "PUT"
+      },
+      {
+        "path": "/v1/note-imports/{import_id}",
+        "method": "GET"
+      },
+      {
+        "path": "/v1/note-imports/{import_id}/cancel",
+        "method": "POST"
+      },
+      {
+        "path": "/v1/notes/{note_id}/purge",
+        "method": "POST"
+      },
+      {
+        "path": "/v1/note-purges/{purge_id}",
+        "method": "GET"
+      },
+      {
+        "path": "/v1/note-export-intents",
+        "method": "POST"
       }
     ],
     "preflight": {
@@ -52,7 +132,8 @@
       ]
     },
     "exposedResponseHeaders": [
-      "X-Request-ID"
+      "X-Request-ID",
+      "Content-Disposition"
     ],
     "credentials": false,
     "exactOriginMatch": true,
@@ -301,7 +382,10 @@
               "type": "string",
               "enum": [
                 "GET",
-                "POST"
+                "POST",
+                "PATCH",
+                "GET, PATCH",
+                "POST, GET"
               ]
             },
             "description": "Only the method implemented for this path."
@@ -361,7 +445,52 @@
         }
       },
       "IdempotencyConflict": {
-        "description": "The owner already used the key with different canonical content.",
+        "description": "The key has conflicting input, the expected revision differs, or the operation is invalid in the current state.",
+        "headers": {
+          "Cache-Control": {
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            },
+            "description": "Present on API successes and errors."
+          },
+          "X-Request-ID": {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Server-generated per request; incoming IDs are not trusted."
+          },
+          "Access-Control-Allow-Origin": {
+            "schema": {
+              "type": "string"
+            },
+            "description": "Conditional: exact NOTES_ALLOWED_ORIGINS_JSON match on a valid memo route/method. Also present on authentication, scope and operation errors. Never wildcard; absent for rejected Host/Origin/route/method/query and non-preflight OPTIONS."
+          },
+          "Access-Control-Expose-Headers": {
+            "schema": {
+              "type": "string",
+              "const": "X-Request-ID"
+            },
+            "description": "Present together with the actual-request CORS header; no credentialed browser requests."
+          },
+          "Vary": {
+            "schema": {
+              "type": "string"
+            },
+            "description": "CORS-enabled actual responses include Origin. Successful preflight additionally varies on Access-Control-Request-Method and Access-Control-Request-Headers."
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotePurged": {
+        "description": "The prior operation refers to a permanently deleted note. It cannot be replayed.",
         "headers": {
           "Cache-Control": {
             "schema": {
@@ -588,47 +717,62 @@
     },
     "schemas": {
       "Error": {
-        "type": "object",
-        "properties": {
-          "error": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Error"
+          },
+          {
             "type": "object",
             "properties": {
-              "code": {
-                "type": "string",
-                "enum": [
-                  "invalid_request",
-                  "invalid_input",
-                  "invalid_token",
-                  "insufficient_scope",
-                  "invalid_host",
-                  "invalid_origin",
-                  "not_found",
-                  "route_not_found",
-                  "method_not_allowed",
-                  "not_acceptable",
-                  "idempotency_conflict",
-                  "request_too_large",
-                  "unsupported_media_type",
-                  "temporarily_unavailable",
-                  "internal_error"
-                ]
-              },
-              "message": {
-                "type": "string",
-                "description": "Safe explanation; never includes input, tokens, SQL or raw exception details."
+              "error": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "enum": [
+                      "invalid_request",
+                      "invalid_input",
+                      "invalid_token",
+                      "insufficient_scope",
+                      "invalid_host",
+                      "invalid_origin",
+                      "not_found",
+                      "route_not_found",
+                      "method_not_allowed",
+                      "not_acceptable",
+                      "idempotency_conflict",
+                      "request_too_large",
+                      "unsupported_media_type",
+                      "temporarily_unavailable",
+                      "internal_error",
+                      "invalid_cursor",
+                      "revision_conflict",
+                      "state_conflict",
+                      "note_purged",
+                      "invalid_archive",
+                      "unsupported_archive_version",
+                      "export_too_large",
+                      "import_too_large",
+                      "import_in_progress",
+                      "intent_expired",
+                      "note_purge_pending"
+                    ]
+                  },
+                  "message": {
+                    "type": "string",
+                    "description": "Safe explanation; never includes input, tokens, SQL or raw exception details."
+                  }
+                },
+                "required": [
+                  "code",
+                  "message"
+                ],
+                "additionalProperties": false
               }
             },
-            "required": [
-              "code",
-              "message"
-            ],
             "additionalProperties": false
           }
-        },
-        "required": [
-          "error"
-        ],
-        "additionalProperties": false
+        ]
       },
       "CreateNoteResult": {
         "type": "object",
@@ -663,86 +807,340 @@
         "format": "uuid",
         "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
       },
-      "SearchNotesResult": {
+      "LifecycleSearchNotesResult": {
         "type": "object",
         "properties": {
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/SearchNoteItem"
+              "type": "object",
+              "properties": {
+                "note_id": {
+                  "type": "string",
+                  "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Trimmed at the domain boundary, 1–200 Unicode code points."
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "snippet": {
+                  "type": "string",
+                  "description": "First at most 200 Unicode code points of the body."
+                },
+                "revision": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "content_version": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "updated_at": {
+                  "type": "string"
+                },
+                "state_changed_at": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "active",
+                    "archived",
+                    "trashed"
+                  ]
+                },
+                "trashed_at": {
+                  "type": "string",
+                  "description": "Present only for trashed notes."
+                },
+                "restore_state": {
+                  "type": "string",
+                  "enum": [
+                    "active",
+                    "archived"
+                  ],
+                  "description": "Present only for trashed notes."
+                }
+              },
+              "required": [
+                "note_id",
+                "title",
+                "created_at",
+                "snippet",
+                "revision",
+                "content_version",
+                "updated_at",
+                "state_changed_at",
+                "state"
+              ],
+              "additionalProperties": false
             },
             "maxItems": 20
           },
           "has_more": {
             "type": "boolean"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
           "items",
-          "has_more"
-        ],
-        "additionalProperties": false,
-        "description": "Newest first: created_at DESC, id DESC. At most the requested limit. No cursor or total count; narrow the query when has_more is true."
-      },
-      "SearchNoteItem": {
-        "type": "object",
-        "properties": {
-          "note_id": {
-            "$ref": "#/components/schemas/NoteId"
-          },
-          "title": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Server-managed UTC RFC 3339 timestamp."
-          },
-          "snippet": {
-            "type": "string",
-            "maxLength": 200,
-            "description": "First at most 200 Unicode code points of the original body, not necessarily a matched passage."
-          }
-        },
-        "required": [
-          "note_id",
-          "title",
-          "created_at",
-          "snippet"
+          "has_more",
+          "next_cursor"
         ],
         "additionalProperties": false
       },
-      "GetNoteResult": {
+      "LifecycleListNotesResult": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "note_id": {
+                  "type": "string",
+                  "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                },
+                "title": {
+                  "type": "string",
+                  "description": "Trimmed at the domain boundary, 1–200 Unicode code points."
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "snippet": {
+                  "type": "string",
+                  "description": "First at most 200 Unicode code points of the body."
+                },
+                "revision": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "content_version": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "updated_at": {
+                  "type": "string"
+                },
+                "state_changed_at": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "active",
+                    "archived",
+                    "trashed"
+                  ]
+                },
+                "trashed_at": {
+                  "type": "string",
+                  "description": "Present only for trashed notes."
+                },
+                "restore_state": {
+                  "type": "string",
+                  "enum": [
+                    "active",
+                    "archived"
+                  ],
+                  "description": "Present only for trashed notes."
+                }
+              },
+              "required": [
+                "note_id",
+                "title",
+                "created_at",
+                "snippet",
+                "revision",
+                "content_version",
+                "updated_at",
+                "state_changed_at",
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 20
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "has_more",
+          "next_cursor"
+        ],
+        "additionalProperties": false
+      },
+      "LifecycleGetNoteResult": {
         "type": "object",
         "properties": {
           "note_id": {
-            "$ref": "#/components/schemas/NoteId"
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
           },
           "title": {
             "type": "string",
-            "minLength": 1,
-            "maxLength": 200
+            "description": "Trimmed at the domain boundary, 1–200 Unicode code points."
           },
           "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Server-managed UTC RFC 3339 timestamp."
+            "type": "string"
           },
           "body": {
             "type": "string",
-            "minLength": 1,
-            "maxLength": 20000,
-            "pattern": "\\S",
-            "description": "Nonblank Unicode string; reject NUL and unpaired surrogates. Preserve verbatim. Lengths count Unicode code points."
+            "description": "Nonblank Markdown, 1–20000 Unicode code points; original content is preserved."
           },
           "sources": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Source"
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Nonblank, at most 300 Unicode code points; preserved verbatim."
+                },
+                "url": {
+                  "type": "string",
+                  "description": "Nonblank HTTP(S) URL, at most 2048 Unicode code points; never fetched."
+                },
+                "excerpt": {
+                  "type": "string",
+                  "description": "Nonblank, at most 1000 Unicode code points; preserved verbatim."
+                }
+              },
+              "additionalProperties": false
             },
             "maxItems": 20
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "content_version": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "state_changed_at": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "archived",
+              "trashed"
+            ]
+          },
+          "trashed_at": {
+            "type": "string",
+            "description": "Present only for trashed notes."
+          },
+          "restore_state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "archived"
+            ],
+            "description": "Present only for trashed notes."
+          },
+          "import_origin": {
+            "type": "object",
+            "properties": {
+              "source_note_id": {
+                "type": "string",
+                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+              },
+              "source_created_at": {
+                "type": "string"
+              },
+              "source_updated_at": {
+                "type": "string"
+              },
+              "source_state_changed_at": {
+                "type": "string"
+              },
+              "imported_at": {
+                "type": "string"
+              },
+              "source_trashed_at": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "source_note_id",
+              "source_created_at",
+              "source_updated_at",
+              "source_state_changed_at",
+              "imported_at"
+            ],
+            "additionalProperties": false
+          },
+          "prior_provenance": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source_note_id": {
+                  "type": "string",
+                  "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                },
+                "source_created_at": {
+                  "type": "string"
+                },
+                "source_updated_at": {
+                  "type": "string"
+                },
+                "source_state_changed_at": {
+                  "type": "string"
+                },
+                "imported_at": {
+                  "type": "string"
+                },
+                "source_trashed_at": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "source_note_id",
+                "source_created_at",
+                "source_updated_at",
+                "source_state_changed_at",
+                "imported_at"
+              ],
+              "additionalProperties": false
+            }
           }
         },
         "required": [
@@ -750,38 +1148,331 @@
           "title",
           "created_at",
           "body",
-          "sources"
+          "sources",
+          "revision",
+          "content_version",
+          "updated_at",
+          "state_changed_at",
+          "state"
         ],
         "additionalProperties": false
       },
-      "Source": {
+      "NoteMutationResult": {
         "type": "object",
         "properties": {
-          "title": {
+          "note_id": {
             "type": "string",
-            "minLength": 1,
-            "maxLength": 300,
-            "pattern": "\\S",
-            "description": "Nonblank Unicode string; reject NUL and unpaired surrogates. Preserve verbatim. Lengths count Unicode code points."
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
           },
-          "url": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 2048,
-            "format": "uri",
-            "pattern": "\\S",
-            "description": "Nonblank absolute HTTP(S) URL, preserved verbatim. The server does not fetch it."
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
           },
-          "excerpt": {
+          "content_version": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "state_changed_at": {
+            "type": "string"
+          },
+          "state": {
             "type": "string",
-            "minLength": 1,
-            "maxLength": 1000,
-            "pattern": "\\S",
-            "description": "Nonblank Unicode string; reject NUL and unpaired surrogates. Preserve verbatim. Lengths count Unicode code points."
+            "enum": [
+              "active",
+              "archived",
+              "trashed"
+            ]
+          },
+          "trashed_at": {
+            "type": "string",
+            "description": "Present only for trashed notes."
+          },
+          "restore_state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "archived"
+            ],
+            "description": "Present only for trashed notes."
+          },
+          "changed": {
+            "type": "boolean"
+          },
+          "replayed": {
+            "type": "boolean"
           }
         },
-        "additionalProperties": false,
-        "minProperties": 1
+        "required": [
+          "note_id",
+          "revision",
+          "content_version",
+          "updated_at",
+          "state_changed_at",
+          "state",
+          "changed",
+          "replayed"
+        ],
+        "additionalProperties": false
+      },
+      "NoteVersionsResult": {
+        "type": "object",
+        "properties": {
+          "note_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+          },
+          "current_revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "current_content_version": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "content_version": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "recorded_at": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "create",
+                    "update",
+                    "restore",
+                    "import"
+                  ]
+                },
+                "restored_from_version": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "import_summary": {
+                  "type": "object",
+                  "properties": {
+                    "source_note_id": {
+                      "type": "string",
+                      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                    },
+                    "source_content_version": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "source_note_id",
+                    "source_content_version"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "content_version",
+                "recorded_at",
+                "source"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 20
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "note_id",
+          "current_revision",
+          "current_content_version",
+          "items",
+          "has_more",
+          "next_cursor"
+        ],
+        "additionalProperties": false
+      },
+      "NoteVersionResult": {
+        "type": "object",
+        "properties": {
+          "note_id": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+          },
+          "title": {
+            "type": "string",
+            "description": "Trimmed at the domain boundary, 1–200 Unicode code points."
+          },
+          "body": {
+            "type": "string",
+            "description": "Nonblank Markdown, 1–20000 Unicode code points; original content is preserved."
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Nonblank, at most 300 Unicode code points; preserved verbatim."
+                },
+                "url": {
+                  "type": "string",
+                  "description": "Nonblank HTTP(S) URL, at most 2048 Unicode code points; never fetched."
+                },
+                "excerpt": {
+                  "type": "string",
+                  "description": "Nonblank, at most 1000 Unicode code points; preserved verbatim."
+                }
+              },
+              "additionalProperties": false
+            },
+            "maxItems": 20
+          },
+          "content_version": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "recorded_at": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "create",
+              "update",
+              "restore",
+              "import"
+            ]
+          },
+          "restored_from_version": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "provenance": {
+            "type": "object",
+            "properties": {
+              "source_note_id": {
+                "type": "string",
+                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+              },
+              "source_content_version": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              },
+              "source_recorded_at": {
+                "type": "string"
+              },
+              "source_operation": {
+                "type": "string",
+                "enum": [
+                  "create",
+                  "update",
+                  "restore",
+                  "import"
+                ]
+              },
+              "imported_at": {
+                "type": "string"
+              },
+              "source_restored_from_version": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "source_note_id",
+              "source_content_version",
+              "source_recorded_at",
+              "source_operation",
+              "imported_at"
+            ],
+            "additionalProperties": false
+          },
+          "prior_provenance": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source_note_id": {
+                  "type": "string",
+                  "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                },
+                "source_content_version": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "source_recorded_at": {
+                  "type": "string"
+                },
+                "source_operation": {
+                  "type": "string",
+                  "enum": [
+                    "create",
+                    "update",
+                    "restore",
+                    "import"
+                  ]
+                },
+                "imported_at": {
+                  "type": "string"
+                },
+                "source_restored_from_version": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "source_note_id",
+                "source_content_version",
+                "source_recorded_at",
+                "source_operation",
+                "imported_at"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "note_id",
+          "title",
+          "body",
+          "sources",
+          "content_version",
+          "recorded_at",
+          "source"
+        ],
+        "additionalProperties": false
       },
       "CreateNoteInput": {
         "type": "object",
@@ -821,27 +1512,34 @@
         ],
         "additionalProperties": false
       },
-      "SearchNotesInput": {
+      "Source": {
         "type": "object",
         "properties": {
-          "query": {
+          "title": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 200,
+            "maxLength": 300,
             "pattern": "\\S",
-            "description": "At most 200 Unicode code points before NFKC/lowercase/trim. Then 1–8 whitespace-separated literal AND terms in the owner’s title/body. Reject NUL and unpaired surrogates."
+            "description": "Nonblank Unicode string; reject NUL and unpaired surrogates. Preserve verbatim. Lengths count Unicode code points."
           },
-          "limit": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 20,
-            "default": 10
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048,
+            "format": "uri",
+            "pattern": "\\S",
+            "description": "Nonblank absolute HTTP(S) URL, preserved verbatim. The server does not fetch it."
+          },
+          "excerpt": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "pattern": "\\S",
+            "description": "Nonblank Unicode string; reject NUL and unpaired surrogates. Preserve verbatim. Lengths count Unicode code points."
           }
         },
-        "required": [
-          "query"
-        ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "minProperties": 1
       }
     },
     "parameters": {}
@@ -1032,6 +1730,9 @@
           "409": {
             "$ref": "#/components/responses/IdempotencyConflict"
           },
+          "410": {
+            "$ref": "#/components/responses/NotePurged"
+          },
           "413": {
             "$ref": "#/components/responses/RequestTooLarge"
           },
@@ -1050,7 +1751,7 @@
     "/v1/notes/search": {
       "post": {
         "operationId": "searchNotes",
-        "summary": "自分のメモを検索する",
+        "summary": "状態を指定してメモを検索する",
         "tags": [
           "メモ"
         ],
@@ -1064,15 +1765,41 @@
         ],
         "requestBody": {
           "required": true,
-          "description": "UTF-8 application/json, optional UTF-8 charset, identity encoding only. Logical JSON arguments serialize within 256 KiB.",
+          "description": "UTF-8 JSON. Path identifiers must not be repeated in the body. Reuse a mutation UUID only with identical input.",
           "content": {
             "application/json": {
-              "example": {
-                "query": "接続 確認",
-                "limit": 10
-              },
               "schema": {
-                "$ref": "#/components/schemas/SearchNotesInput"
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "description": "1–8 literal AND terms; up to 200 Unicode code points."
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20,
+                    "description": "Default 10."
+                  },
+                  "cursor": {
+                    "type": "string",
+                    "description": "Opaque cursor bound to the owner, operation and conditions; expires after 24 hours."
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "archived",
+                      "active_and_archived",
+                      "trashed"
+                    ],
+                    "description": "Default active. Trash is selected explicitly."
+                  }
+                },
+                "required": [
+                  "query"
+                ],
+                "additionalProperties": false
               }
             }
           }
@@ -1117,19 +1844,8 @@
             },
             "content": {
               "application/json": {
-                "example": {
-                  "items": [
-                    {
-                      "note_id": "abcdefab-cdef-4abc-8def-abcdefabcdef",
-                      "title": "タドリノの接続確認",
-                      "created_at": "2026-10-13T00:00:00.000Z",
-                      "snippet": "## 確認メモ\n保存した知識を別の会話でも取り出す。\n"
-                    }
-                  ],
-                  "has_more": false
-                },
                 "schema": {
-                  "$ref": "#/components/schemas/SearchNotesResult"
+                  "$ref": "#/components/schemas/LifecycleSearchNotesResult"
                 }
               }
             }
@@ -1152,6 +1868,146 @@
           "406": {
             "$ref": "#/components/responses/NotAcceptable"
           },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "410": {
+            "$ref": "#/components/responses/NotePurged"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/TemporarilyUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/notes/list": {
+      "post": {
+        "operationId": "listNotes",
+        "summary": "状態を指定してメモを一覧する",
+        "tags": [
+          "メモ"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scopes": [
+          "notes:read"
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "UTF-8 JSON. Path identifiers must not be repeated in the body. Reuse a mutation UUID only with identical input.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20,
+                    "description": "Default 10."
+                  },
+                  "cursor": {
+                    "type": "string",
+                    "description": "Opaque cursor bound to the owner, operation and conditions; expires after 24 hours."
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "archived",
+                      "active_and_archived",
+                      "trashed"
+                    ],
+                    "description": "Default active. Trash is selected explicitly."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Owner-visible memo returned verbatim.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "Present on API successes and errors."
+              },
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "description": "Server-generated per request; incoming IDs are not trusted."
+              },
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Conditional: exact NOTES_ALLOWED_ORIGINS_JSON match on a valid memo route/method. Also present on authentication, scope and operation errors. Never wildcard; absent for rejected Host/Origin/route/method/query and non-preflight OPTIONS."
+              },
+              "Access-Control-Expose-Headers": {
+                "schema": {
+                  "type": "string",
+                  "const": "X-Request-ID"
+                },
+                "description": "Present together with the actual-request CORS header; no credentialed browser requests."
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "CORS-enabled actual responses include Origin. Successful preflight additionally varies on Access-Control-Request-Method and Access-Control-Request-Headers."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LifecycleListNotesResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/InvalidToken"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "410": {
+            "$ref": "#/components/responses/NotePurged"
+          },
           "413": {
             "$ref": "#/components/responses/RequestTooLarge"
           },
@@ -1170,7 +2026,7 @@
     "/v1/notes/{note_id}": {
       "get": {
         "operationId": "getNote",
-        "summary": "自分のメモの全文を取得する",
+        "summary": "通常・アーカイブのメモを取得する",
         "tags": [
           "メモ"
         ],
@@ -1188,11 +2044,9 @@
               "type": "string",
               "format": "uuid",
               "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
-              "example": "abcdefab-cdef-4abc-8def-abcdefabcdef",
-              "description": "UUIDv4, case-insensitive on input. Other owners’ IDs and nonexistent IDs return the same not_found response."
+              "example": "abcdefab-cdef-4abc-8def-abcdefabcdef"
             },
             "required": true,
-            "description": "UUIDv4, case-insensitive on input. Other owners’ IDs and nonexistent IDs return the same not_found response.",
             "name": "note_id",
             "in": "path"
           }
@@ -1237,20 +2091,8 @@
             },
             "content": {
               "application/json": {
-                "example": {
-                  "note_id": "abcdefab-cdef-4abc-8def-abcdefabcdef",
-                  "title": "タドリノの接続確認",
-                  "created_at": "2026-10-13T00:00:00.000Z",
-                  "body": "## 確認メモ\n保存した知識を別の会話でも取り出す。\n",
-                  "sources": [
-                    {
-                      "title": "合成の参考資料",
-                      "url": "https://example.com/reference"
-                    }
-                  ]
-                },
                 "schema": {
-                  "$ref": "#/components/schemas/GetNoteResult"
+                  "$ref": "#/components/schemas/LifecycleGetNoteResult"
                 }
               }
             }
@@ -1273,6 +2115,12 @@
           "406": {
             "$ref": "#/components/responses/NotAcceptable"
           },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "410": {
+            "$ref": "#/components/responses/NotePurged"
+          },
           "413": {
             "$ref": "#/components/responses/RequestTooLarge"
           },
@@ -1284,6 +2132,3549 @@
           },
           "503": {
             "$ref": "#/components/responses/TemporarilyUnavailable"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateNote",
+        "summary": "メモを編集し、変更前の版を保持する",
+        "tags": [
+          "メモ"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scopes": [
+          "notes:update"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+              "example": "abcdefab-cdef-4abc-8def-abcdefabcdef"
+            },
+            "required": true,
+            "name": "note_id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "UTF-8 JSON. Path identifiers must not be repeated in the body. Reuse a mutation UUID only with identical input.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expected_revision": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "idempotency_key": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+                    "description": "UUIDv4 for this operation. Reuse only with identical input after an uncertain result."
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Trimmed at the domain boundary, 1–200 Unicode code points."
+                  },
+                  "body": {
+                    "type": "string",
+                    "description": "Nonblank Markdown, 1–20000 Unicode code points; original content is preserved."
+                  },
+                  "sources": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "title": {
+                          "type": "string",
+                          "description": "Nonblank, at most 300 Unicode code points; preserved verbatim."
+                        },
+                        "url": {
+                          "type": "string",
+                          "description": "Nonblank HTTP(S) URL, at most 2048 Unicode code points; never fetched."
+                        },
+                        "excerpt": {
+                          "type": "string",
+                          "description": "Nonblank, at most 1000 Unicode code points; preserved verbatim."
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "maxItems": 20
+                  }
+                },
+                "required": [
+                  "expected_revision",
+                  "idempotency_key"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Owner-visible memo returned verbatim.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "Present on API successes and errors."
+              },
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "description": "Server-generated per request; incoming IDs are not trusted."
+              },
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Conditional: exact NOTES_ALLOWED_ORIGINS_JSON match on a valid memo route/method. Also present on authentication, scope and operation errors. Never wildcard; absent for rejected Host/Origin/route/method/query and non-preflight OPTIONS."
+              },
+              "Access-Control-Expose-Headers": {
+                "schema": {
+                  "type": "string",
+                  "const": "X-Request-ID"
+                },
+                "description": "Present together with the actual-request CORS header; no credentialed browser requests."
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "CORS-enabled actual responses include Origin. Successful preflight additionally varies on Access-Control-Request-Method and Access-Control-Request-Headers."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteMutationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/InvalidToken"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "410": {
+            "$ref": "#/components/responses/NotePurged"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/TemporarilyUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/notes/{note_id}/archive": {
+      "post": {
+        "operationId": "archiveNote",
+        "summary": "メモをアーカイブする",
+        "tags": [
+          "メモ"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scopes": [
+          "notes:organize"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+              "example": "abcdefab-cdef-4abc-8def-abcdefabcdef"
+            },
+            "required": true,
+            "name": "note_id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "UTF-8 JSON. Path identifiers must not be repeated in the body. Reuse a mutation UUID only with identical input.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expected_revision": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "idempotency_key": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+                    "description": "UUIDv4 for this operation. Reuse only with identical input after an uncertain result."
+                  }
+                },
+                "required": [
+                  "expected_revision",
+                  "idempotency_key"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Owner-visible memo returned verbatim.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "Present on API successes and errors."
+              },
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "description": "Server-generated per request; incoming IDs are not trusted."
+              },
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Conditional: exact NOTES_ALLOWED_ORIGINS_JSON match on a valid memo route/method. Also present on authentication, scope and operation errors. Never wildcard; absent for rejected Host/Origin/route/method/query and non-preflight OPTIONS."
+              },
+              "Access-Control-Expose-Headers": {
+                "schema": {
+                  "type": "string",
+                  "const": "X-Request-ID"
+                },
+                "description": "Present together with the actual-request CORS header; no credentialed browser requests."
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "CORS-enabled actual responses include Origin. Successful preflight additionally varies on Access-Control-Request-Method and Access-Control-Request-Headers."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteMutationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/InvalidToken"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "410": {
+            "$ref": "#/components/responses/NotePurged"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/TemporarilyUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/notes/{note_id}/unarchive": {
+      "post": {
+        "operationId": "unarchiveNote",
+        "summary": "アーカイブを解除する",
+        "tags": [
+          "メモ"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scopes": [
+          "notes:organize"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+              "example": "abcdefab-cdef-4abc-8def-abcdefabcdef"
+            },
+            "required": true,
+            "name": "note_id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "UTF-8 JSON. Path identifiers must not be repeated in the body. Reuse a mutation UUID only with identical input.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expected_revision": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "idempotency_key": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+                    "description": "UUIDv4 for this operation. Reuse only with identical input after an uncertain result."
+                  }
+                },
+                "required": [
+                  "expected_revision",
+                  "idempotency_key"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Owner-visible memo returned verbatim.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "Present on API successes and errors."
+              },
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "description": "Server-generated per request; incoming IDs are not trusted."
+              },
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Conditional: exact NOTES_ALLOWED_ORIGINS_JSON match on a valid memo route/method. Also present on authentication, scope and operation errors. Never wildcard; absent for rejected Host/Origin/route/method/query and non-preflight OPTIONS."
+              },
+              "Access-Control-Expose-Headers": {
+                "schema": {
+                  "type": "string",
+                  "const": "X-Request-ID"
+                },
+                "description": "Present together with the actual-request CORS header; no credentialed browser requests."
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "CORS-enabled actual responses include Origin. Successful preflight additionally varies on Access-Control-Request-Method and Access-Control-Request-Headers."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteMutationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/InvalidToken"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "410": {
+            "$ref": "#/components/responses/NotePurged"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/TemporarilyUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/notes/{note_id}/trash": {
+      "post": {
+        "operationId": "trashNote",
+        "summary": "メモをゴミ箱へ移動する",
+        "tags": [
+          "メモ"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scopes": [
+          "notes:organize"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+              "example": "abcdefab-cdef-4abc-8def-abcdefabcdef"
+            },
+            "required": true,
+            "name": "note_id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "UTF-8 JSON. Path identifiers must not be repeated in the body. Reuse a mutation UUID only with identical input.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expected_revision": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "idempotency_key": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+                    "description": "UUIDv4 for this operation. Reuse only with identical input after an uncertain result."
+                  }
+                },
+                "required": [
+                  "expected_revision",
+                  "idempotency_key"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Owner-visible memo returned verbatim.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "Present on API successes and errors."
+              },
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "description": "Server-generated per request; incoming IDs are not trusted."
+              },
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Conditional: exact NOTES_ALLOWED_ORIGINS_JSON match on a valid memo route/method. Also present on authentication, scope and operation errors. Never wildcard; absent for rejected Host/Origin/route/method/query and non-preflight OPTIONS."
+              },
+              "Access-Control-Expose-Headers": {
+                "schema": {
+                  "type": "string",
+                  "const": "X-Request-ID"
+                },
+                "description": "Present together with the actual-request CORS header; no credentialed browser requests."
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "CORS-enabled actual responses include Origin. Successful preflight additionally varies on Access-Control-Request-Method and Access-Control-Request-Headers."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteMutationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/InvalidToken"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "410": {
+            "$ref": "#/components/responses/NotePurged"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/TemporarilyUnavailable"
+          }
+        }
+      },
+      "get": {
+        "operationId": "getTrashedNote",
+        "summary": "ゴミ箱内のメモを明示的に取得する",
+        "tags": [
+          "メモ"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scopes": [
+          "notes:read"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+              "example": "abcdefab-cdef-4abc-8def-abcdefabcdef"
+            },
+            "required": true,
+            "name": "note_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Owner-visible memo returned verbatim.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "Present on API successes and errors."
+              },
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "description": "Server-generated per request; incoming IDs are not trusted."
+              },
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Conditional: exact NOTES_ALLOWED_ORIGINS_JSON match on a valid memo route/method. Also present on authentication, scope and operation errors. Never wildcard; absent for rejected Host/Origin/route/method/query and non-preflight OPTIONS."
+              },
+              "Access-Control-Expose-Headers": {
+                "schema": {
+                  "type": "string",
+                  "const": "X-Request-ID"
+                },
+                "description": "Present together with the actual-request CORS header; no credentialed browser requests."
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "CORS-enabled actual responses include Origin. Successful preflight additionally varies on Access-Control-Request-Method and Access-Control-Request-Headers."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LifecycleGetNoteResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/InvalidToken"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "410": {
+            "$ref": "#/components/responses/NotePurged"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/TemporarilyUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/notes/{note_id}/restore": {
+      "post": {
+        "operationId": "restoreNote",
+        "summary": "ゴミ箱から直前の状態へ復元する",
+        "tags": [
+          "メモ"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scopes": [
+          "notes:organize"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+              "example": "abcdefab-cdef-4abc-8def-abcdefabcdef"
+            },
+            "required": true,
+            "name": "note_id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "UTF-8 JSON. Path identifiers must not be repeated in the body. Reuse a mutation UUID only with identical input.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expected_revision": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "idempotency_key": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+                    "description": "UUIDv4 for this operation. Reuse only with identical input after an uncertain result."
+                  }
+                },
+                "required": [
+                  "expected_revision",
+                  "idempotency_key"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Owner-visible memo returned verbatim.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "Present on API successes and errors."
+              },
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "description": "Server-generated per request; incoming IDs are not trusted."
+              },
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Conditional: exact NOTES_ALLOWED_ORIGINS_JSON match on a valid memo route/method. Also present on authentication, scope and operation errors. Never wildcard; absent for rejected Host/Origin/route/method/query and non-preflight OPTIONS."
+              },
+              "Access-Control-Expose-Headers": {
+                "schema": {
+                  "type": "string",
+                  "const": "X-Request-ID"
+                },
+                "description": "Present together with the actual-request CORS header; no credentialed browser requests."
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "CORS-enabled actual responses include Origin. Successful preflight additionally varies on Access-Control-Request-Method and Access-Control-Request-Headers."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteMutationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/InvalidToken"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "410": {
+            "$ref": "#/components/responses/NotePurged"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/TemporarilyUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/notes/{note_id}/versions/list": {
+      "post": {
+        "operationId": "listNoteVersions",
+        "summary": "内容履歴を一覧する",
+        "tags": [
+          "メモ"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scopes": [
+          "notes:read"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+              "example": "abcdefab-cdef-4abc-8def-abcdefabcdef"
+            },
+            "required": true,
+            "name": "note_id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "UTF-8 JSON. Path identifiers must not be repeated in the body. Reuse a mutation UUID only with identical input.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20,
+                    "description": "Default 10."
+                  },
+                  "cursor": {
+                    "type": "string",
+                    "description": "Opaque cursor bound to the owner, operation and conditions; expires after 24 hours."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Owner-visible memo returned verbatim.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "Present on API successes and errors."
+              },
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "description": "Server-generated per request; incoming IDs are not trusted."
+              },
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Conditional: exact NOTES_ALLOWED_ORIGINS_JSON match on a valid memo route/method. Also present on authentication, scope and operation errors. Never wildcard; absent for rejected Host/Origin/route/method/query and non-preflight OPTIONS."
+              },
+              "Access-Control-Expose-Headers": {
+                "schema": {
+                  "type": "string",
+                  "const": "X-Request-ID"
+                },
+                "description": "Present together with the actual-request CORS header; no credentialed browser requests."
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "CORS-enabled actual responses include Origin. Successful preflight additionally varies on Access-Control-Request-Method and Access-Control-Request-Headers."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteVersionsResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/InvalidToken"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "410": {
+            "$ref": "#/components/responses/NotePurged"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/TemporarilyUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/notes/{note_id}/trash/versions/list": {
+      "post": {
+        "operationId": "listTrashedNoteVersions",
+        "summary": "ゴミ箱内の内容履歴を一覧する",
+        "tags": [
+          "メモ"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scopes": [
+          "notes:read"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+              "example": "abcdefab-cdef-4abc-8def-abcdefabcdef"
+            },
+            "required": true,
+            "name": "note_id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "UTF-8 JSON. Path identifiers must not be repeated in the body. Reuse a mutation UUID only with identical input.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20,
+                    "description": "Default 10."
+                  },
+                  "cursor": {
+                    "type": "string",
+                    "description": "Opaque cursor bound to the owner, operation and conditions; expires after 24 hours."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Owner-visible memo returned verbatim.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "Present on API successes and errors."
+              },
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "description": "Server-generated per request; incoming IDs are not trusted."
+              },
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Conditional: exact NOTES_ALLOWED_ORIGINS_JSON match on a valid memo route/method. Also present on authentication, scope and operation errors. Never wildcard; absent for rejected Host/Origin/route/method/query and non-preflight OPTIONS."
+              },
+              "Access-Control-Expose-Headers": {
+                "schema": {
+                  "type": "string",
+                  "const": "X-Request-ID"
+                },
+                "description": "Present together with the actual-request CORS header; no credentialed browser requests."
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "CORS-enabled actual responses include Origin. Successful preflight additionally varies on Access-Control-Request-Method and Access-Control-Request-Headers."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteVersionsResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/InvalidToken"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "410": {
+            "$ref": "#/components/responses/NotePurged"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/TemporarilyUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/notes/{note_id}/versions/{version}": {
+      "get": {
+        "operationId": "getNoteVersion",
+        "summary": "過去の内容版を取得する",
+        "tags": [
+          "メモ"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scopes": [
+          "notes:read"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+              "example": "abcdefab-cdef-4abc-8def-abcdefabcdef"
+            },
+            "required": true,
+            "name": "note_id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "required": true,
+            "name": "version",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Owner-visible memo returned verbatim.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "Present on API successes and errors."
+              },
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "description": "Server-generated per request; incoming IDs are not trusted."
+              },
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Conditional: exact NOTES_ALLOWED_ORIGINS_JSON match on a valid memo route/method. Also present on authentication, scope and operation errors. Never wildcard; absent for rejected Host/Origin/route/method/query and non-preflight OPTIONS."
+              },
+              "Access-Control-Expose-Headers": {
+                "schema": {
+                  "type": "string",
+                  "const": "X-Request-ID"
+                },
+                "description": "Present together with the actual-request CORS header; no credentialed browser requests."
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "CORS-enabled actual responses include Origin. Successful preflight additionally varies on Access-Control-Request-Method and Access-Control-Request-Headers."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteVersionResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/InvalidToken"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "410": {
+            "$ref": "#/components/responses/NotePurged"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/TemporarilyUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/notes/{note_id}/trash/versions/{version}": {
+      "get": {
+        "operationId": "getTrashedNoteVersion",
+        "summary": "ゴミ箱内の過去の内容版を取得する",
+        "tags": [
+          "メモ"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scopes": [
+          "notes:read"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+              "example": "abcdefab-cdef-4abc-8def-abcdefabcdef"
+            },
+            "required": true,
+            "name": "note_id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "required": true,
+            "name": "version",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Owner-visible memo returned verbatim.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "Present on API successes and errors."
+              },
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "description": "Server-generated per request; incoming IDs are not trusted."
+              },
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Conditional: exact NOTES_ALLOWED_ORIGINS_JSON match on a valid memo route/method. Also present on authentication, scope and operation errors. Never wildcard; absent for rejected Host/Origin/route/method/query and non-preflight OPTIONS."
+              },
+              "Access-Control-Expose-Headers": {
+                "schema": {
+                  "type": "string",
+                  "const": "X-Request-ID"
+                },
+                "description": "Present together with the actual-request CORS header; no credentialed browser requests."
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "CORS-enabled actual responses include Origin. Successful preflight additionally varies on Access-Control-Request-Method and Access-Control-Request-Headers."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteVersionResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/InvalidToken"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "410": {
+            "$ref": "#/components/responses/NotePurged"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/TemporarilyUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/notes/{note_id}/versions/{version}/restore": {
+      "post": {
+        "operationId": "restoreNoteVersion",
+        "summary": "過去版を新しい内容版として復元する",
+        "tags": [
+          "メモ"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scopes": [
+          "notes:update"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+              "example": "abcdefab-cdef-4abc-8def-abcdefabcdef"
+            },
+            "required": true,
+            "name": "note_id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "required": true,
+            "name": "version",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "UTF-8 JSON. Path identifiers must not be repeated in the body. Reuse a mutation UUID only with identical input.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expected_revision": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "idempotency_key": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+                    "description": "UUIDv4 for this operation. Reuse only with identical input after an uncertain result."
+                  }
+                },
+                "required": [
+                  "expected_revision",
+                  "idempotency_key"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Owner-visible memo returned verbatim.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                },
+                "description": "Present on API successes and errors."
+              },
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "description": "Server-generated per request; incoming IDs are not trusted."
+              },
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Conditional: exact NOTES_ALLOWED_ORIGINS_JSON match on a valid memo route/method. Also present on authentication, scope and operation errors. Never wildcard; absent for rejected Host/Origin/route/method/query and non-preflight OPTIONS."
+              },
+              "Access-Control-Expose-Headers": {
+                "schema": {
+                  "type": "string",
+                  "const": "X-Request-ID"
+                },
+                "description": "Present together with the actual-request CORS header; no credentialed browser requests."
+              },
+              "Vary": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "CORS-enabled actual responses include Origin. Successful preflight additionally varies on Access-Control-Request-Method and Access-Control-Request-Headers."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteMutationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/InvalidToken"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyConflict"
+          },
+          "410": {
+            "$ref": "#/components/responses/NotePurged"
+          },
+          "413": {
+            "$ref": "#/components/responses/RequestTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/TemporarilyUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/notes/export": {
+      "post": {
+        "operationId": "exportNotes",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scopes": [
+          "notes:export"
+        ],
+        "tags": [
+          "メモの入出力"
+        ],
+        "description": "Explicit owner × Client ID authorization. ZIP: 80 MiB on the wire, 64 MiB expanded, 1000 notes, 10000 versions, 120 seconds. Authentication precedes binary reception. No automatic retries.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "states": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "active",
+                        "archived",
+                        "trashed"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 3
+                  },
+                  "include_history": {
+                    "type": "boolean"
+                  },
+                  "note_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "minItems": 1,
+                    "maxItems": 1000
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Versioned Markdown + JSON ZIP. A stream interrupted after headers is not a successful export.",
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string",
+                  "const": "attachment; filename=\"tadorino-export.zip\""
+                }
+              }
+            },
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/note-imports": {
+      "post": {
+        "operationId": "prepareNoteImport",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scopes": [
+          "notes:import"
+        ],
+        "tags": [
+          "メモの入出力"
+        ],
+        "description": "Explicit owner × Client ID authorization. ZIP: 80 MiB on the wire, 64 MiB expanded, 1000 notes, 10000 versions, 120 seconds. Authentication precedes binary reception. No automatic retries.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "idempotency_key": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "source_note_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "minItems": 1,
+                    "maxItems": 1000
+                  }
+                },
+                "required": [
+                  "idempotency_key"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Owner-visible import state or committed mappings. Replays return the same IDs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "import_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "awaiting_upload",
+                            "uploading",
+                            "cancelled",
+                            "expired"
+                          ]
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "import_id",
+                        "status",
+                        "expires_at"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "import_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "committed"
+                          ]
+                        },
+                        "imported_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "imported_notes": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1000
+                        },
+                        "imported_versions": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10000
+                        },
+                        "mappings": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "source_note_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "note_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "content_version": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "source_note_id",
+                              "note_id",
+                              "content_version"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "maxItems": 1000
+                        },
+                        "replayed": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "import_id",
+                        "status",
+                        "imported_at",
+                        "imported_notes",
+                        "imported_versions",
+                        "mappings",
+                        "replayed"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Owner-visible import state or committed mappings. Replays return the same IDs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "import_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "awaiting_upload",
+                            "uploading",
+                            "cancelled",
+                            "expired"
+                          ]
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "import_id",
+                        "status",
+                        "expires_at"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "import_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "committed"
+                          ]
+                        },
+                        "imported_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "imported_notes": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1000
+                        },
+                        "imported_versions": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10000
+                        },
+                        "mappings": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "source_note_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "note_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "content_version": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "source_note_id",
+                              "note_id",
+                              "content_version"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "maxItems": 1000
+                        },
+                        "replayed": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "import_id",
+                        "status",
+                        "imported_at",
+                        "imported_notes",
+                        "imported_versions",
+                        "mappings",
+                        "replayed"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/note-imports/{import_id}/archive": {
+      "put": {
+        "operationId": "uploadNoteImport",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scopes": [
+          "notes:import"
+        ],
+        "tags": [
+          "メモの入出力"
+        ],
+        "description": "Explicit owner × Client ID authorization. ZIP: 80 MiB on the wire, 64 MiB expanded, 1000 notes, 10000 versions, 120 seconds. Authentication precedes binary reception. No automatic retries.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "import_id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/zip": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Owner-visible import state or committed mappings. Replays return the same IDs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "import_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "committed"
+                      ]
+                    },
+                    "imported_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "imported_notes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 1000
+                    },
+                    "imported_versions": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10000
+                    },
+                    "mappings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "source_note_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "note_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "content_version": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "source_note_id",
+                          "note_id",
+                          "content_version"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "maxItems": 1000
+                    },
+                    "replayed": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "import_id",
+                    "status",
+                    "imported_at",
+                    "imported_notes",
+                    "imported_versions",
+                    "mappings",
+                    "replayed"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/note-imports/{import_id}": {
+      "get": {
+        "operationId": "getNoteImport",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scopes": [
+          "notes:import"
+        ],
+        "tags": [
+          "メモの入出力"
+        ],
+        "description": "Explicit owner × Client ID authorization. ZIP: 80 MiB on the wire, 64 MiB expanded, 1000 notes, 10000 versions, 120 seconds. Authentication precedes binary reception. No automatic retries.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "import_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Owner-visible import state or committed mappings. Replays return the same IDs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "import_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "awaiting_upload",
+                            "uploading",
+                            "cancelled",
+                            "expired"
+                          ]
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "import_id",
+                        "status",
+                        "expires_at"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "import_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "committed"
+                          ]
+                        },
+                        "imported_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "imported_notes": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1000
+                        },
+                        "imported_versions": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10000
+                        },
+                        "mappings": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "source_note_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "note_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "content_version": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "source_note_id",
+                              "note_id",
+                              "content_version"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "maxItems": 1000
+                        },
+                        "replayed": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "import_id",
+                        "status",
+                        "imported_at",
+                        "imported_notes",
+                        "imported_versions",
+                        "mappings",
+                        "replayed"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/note-imports/{import_id}/cancel": {
+      "post": {
+        "operationId": "cancelNoteImport",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scopes": [
+          "notes:import"
+        ],
+        "tags": [
+          "メモの入出力"
+        ],
+        "description": "Explicit owner × Client ID authorization. ZIP: 80 MiB on the wire, 64 MiB expanded, 1000 notes, 10000 versions, 120 seconds. Authentication precedes binary reception. No automatic retries.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "import_id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Owner-visible import state or committed mappings. Replays return the same IDs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "import_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "awaiting_upload",
+                            "uploading",
+                            "cancelled",
+                            "expired"
+                          ]
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "import_id",
+                        "status",
+                        "expires_at"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "import_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "committed"
+                          ]
+                        },
+                        "imported_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "imported_notes": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1000
+                        },
+                        "imported_versions": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10000
+                        },
+                        "mappings": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "source_note_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "note_id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "content_version": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "source_note_id",
+                              "note_id",
+                              "content_version"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "maxItems": 1000
+                        },
+                        "replayed": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "import_id",
+                        "status",
+                        "imported_at",
+                        "imported_notes",
+                        "imported_versions",
+                        "mappings",
+                        "replayed"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Safe JSON error before streaming starts. Cache-Control: no-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notes/{note_id}/purge": {
+      "post": {
+        "operationId": "purgeNote",
+        "tags": [
+          "メモの完全削除"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scopes": [
+          "notes:purge"
+        ],
+        "description": "Requires current owner × Client ID purge permission and notes:purge. Only trashed notes may be purged. Pending is not deletion completion. Accepted deletions finish internally after permission revocation. Never automatically retry with a new key.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "note_id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expected_revision": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "idempotency_key": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "expected_revision",
+                  "idempotency_key"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Current owner-visible deletion status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "purge_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "note_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "completed"
+                      ]
+                    },
+                    "requested_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "completed_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "purge_id",
+                    "note_id",
+                    "status",
+                    "requested_at"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Frozen; output termination or ledger confirmation is pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "purge_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "note_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "completed"
+                      ]
+                    },
+                    "requested_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "completed_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "purge_id",
+                    "note_id",
+                    "status",
+                    "requested_at"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/note-purges/{purge_id}": {
+      "get": {
+        "operationId": "getNotePurge",
+        "tags": [
+          "メモの完全削除"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scopes": [
+          "notes:purge"
+        ],
+        "description": "Requires current owner × Client ID purge permission and notes:purge. Only trashed notes may be purged. Pending is not deletion completion. Accepted deletions finish internally after permission revocation. Never automatically retry with a new key.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "purge_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current owner-visible deletion status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "purge_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "note_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "completed"
+                      ]
+                    },
+                    "requested_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "completed_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "purge_id",
+                    "note_id",
+                    "status",
+                    "requested_at"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Frozen; output termination or ledger confirmation is pending.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "purge_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "note_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "completed"
+                      ]
+                    },
+                    "requested_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "completed_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "purge_id",
+                    "note_id",
+                    "status",
+                    "requested_at"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/note-export-intents": {
+      "post": {
+        "operationId": "prepareNoteExport",
+        "tags": [
+          "メモの入出力"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-required-scopes": [
+          "notes:export"
+        ],
+        "description": "Human-only 30-minute authenticated browser link. It does not create a completed ZIP or grant access by possession of the URL. Source and file app permissions are rechecked for each transfer.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "states": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "active",
+                        "archived",
+                        "trashed"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 3
+                  },
+                  "include_history": {
+                    "type": "boolean"
+                  },
+                  "note_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "minItems": 1,
+                    "maxItems": 1000
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Prepared file intent.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "intent_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "operation": {
+                      "type": "string",
+                      "enum": [
+                        "export"
+                      ]
+                    },
+                    "expires_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  },
+                  "required": [
+                    "intent_id",
+                    "operation",
+                    "expires_at",
+                    "url"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Safe JSON error. No-store.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }

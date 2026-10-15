@@ -368,7 +368,7 @@ export class TadorinoClient {
       };
       const response = await send(plan);
       if (operation === 'exportNotes') { const result = await exportStream(response,context,plan); streaming=true; return result; }
-      const result = await parseResponse(response,context,operation,plan,operation === 'createNote' || operation === 'importNotes' ? [200,201] : operation === 'purgeNote' ? [200,202] : [200]);
+      const result = await parseResponse(response,context,operation,plan,operation === 'createNote' || operation === 'importNotes' ? [200,201] : operation === 'purgeNote' || operation === 'getNotePurge' ? [200,202] : [200]);
       if (operation !== 'importNotes') return result;
       const importId = /** @type {import('./lifecycle-types.js').NoteImportResult} */(result).import_id;
       const next = {...plan,path:`/v1/note-imports/${importId}/archive`,method:'PUT',body:undefined,id:importId};

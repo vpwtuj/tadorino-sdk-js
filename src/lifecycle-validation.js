@@ -131,7 +131,7 @@ export function projectLifecycle(value,operation,status,plan) {
   if (operation === 'purgeNote' || operation === 'getNotePurge') {
     const purge_id = uuid(raw.purge_id); const note_id = uuid(raw.note_id);
     if ((operation === 'purgeNote' && note_id !== plan.id) || (operation === 'getNotePurge' && purge_id !== plan.id) || !['pending','completed'].includes(/** @type {string} */(raw.status))) throw new Error('purge');
-    if ((operation === 'purgeNote' && status !== (raw.status === 'pending' ? 202 : 200)) || (raw.status === 'pending' && Object.hasOwn(raw,'completed_at'))) throw new Error('purge');
+    if ((status !== (raw.status === 'pending' ? 202 : 200)) || (raw.status === 'pending' && Object.hasOwn(raw,'completed_at'))) throw new Error('purge');
     return {purge_id,note_id,status:raw.status,requested_at:date(raw.requested_at),...(raw.status === 'completed' ? {completed_at:date(raw.completed_at)} : {})};
   }
   if (operation === 'createNote') return projectResult(value,'createNote',status,plan.limit,plan.id);
