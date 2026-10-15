@@ -6,6 +6,8 @@
 
 機械は事前登録した固定の所有者であり、本人の代行ログインではありません。Auth0のM2M clientとタドリノの有効な機械登録、メモAPI用audience、許可scopeが必要です。保存は `notes:write`、検索・取得は `notes:read` です。メモ用Access TokenをMCP・管理REST・別の本人のメモに使えません。ブラウザから渡されたclient ID・所有者IDで認可を切り替えません。
 
+token取得時の要求scopeだけで、発行される権限の縮小を保証しません。実開発テナントでは `notes:read` だけを要求しても、Client Grantがread/writeを許可していると両scopeを持つ署名JWTが発行されました。最小権限はAuth0のClient Grantで制限し、APIは実際の署名検証済みtokenのscopeで認可します。providerの `scopes` 指定やブラウザの操作制限を認可境界の代わりにしないでください。
+
 利用アプリは、そのアプリの利用者を認証し、どの操作を機械に実行させてよいかをバックエンドで認可します。SDKはその認証・認可を実装しません。この例のHost・Origin・CSRF対策はlocalhost用入口の保護であり、インターネット利用者のログイン機能ではありません。公開サーバーとして配備する例は対象外です。
 
 ## localhostのReactとExpress
@@ -53,6 +55,8 @@ const found = await client.searchNotes({ query: '機械' });
 一つのproviderはissuer・client・audience・scopeの固定設定に閉じます。異なる設定は別インスタンスにし、可変の共通token変数で本人や機械を切り替えません。キャッシュはそのインスタンスのメモリだけです。Auth0の正確なHTTPS `/oauth/token` へ固定したPOSTを行い、redirect・Cookieを使いません。応答のbyte上限は64KiB、既定timeoutは10秒（設定可能範囲1〜60000ms）です。token、Bearer型、整数の `expires_in` を検査し、期限の安全余裕を10%・上限30秒だけ取ります。HTTP通信時間も有効期間へ含めます。
 
 同時取得は一つにまとめます。一つのSDK操作を取り消すと、その操作だけが待つのをやめます。他の待機者の発行要求は壊しません。全員が取り消した場合も発行は有限のprovider timeoutまで続き、成功時は同じ機械の次の操作でcacheを利用できます。失敗はcacheせず、自動retryは0回です。Refresh Token・永続保存・生のOAuthエラー転送は行いません。
+
+今回確認した開発テナントのFree枠はM2M token月1000件です。有効期間900秒からcacheの安全余裕30秒を引くと実効870秒であり、常時要求がある1 providerでも31日で約3079回（約3100回）の発行となり枠を超えます。必要な操作時だけ取得しcacheを使う前提で、複数backend・再起動による追加発行も含めて利用量を設計します。共有APIのtoken寿命や契約の有料化は自動変更しません。
 
 Secretを更新したらproviderを作り直すかアプリを再起動します。Secret更新だけでは発行済みAccess Tokenは失効しません。サービス側の機械停止・client解除は別の認可処理です。停止・未登録はメモRESTで401、scope不足は403となります。SDKとこの例は401を受けて自動再送しません。
 

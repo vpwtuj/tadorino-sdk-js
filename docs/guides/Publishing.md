@@ -45,7 +45,7 @@ HTTP404・429・5xx・通信中断は待機期限内で再確認します。そ�
 
 ## 以後のtrusted publishing
 
-初回npm公開後、次の新しい版をOIDCで公開する直前にパッケージのSettingsでGitHub Actionsのtrusted publisherを設定します。作成後2日以内に最初の成功した公開が必要で、それを過ぎると設定が期限切れになります。文書だけの配置は、この初回OIDC公開の代わりにはなりません。
+初回npm公開後、次の新しい版をOIDCで公開する直前に、パッケージのSettingsまたは公式 `npm trust` CLIでGitHub Actionsのtrusted publisherを設定します。作成後2日以内に最初の成功した公開が必要で、それを過ぎると設定が期限切れになります。文書だけの配置は、この初回OIDC公開の代わりにはなりません。
 
 | 設定項目 | 値 |
 | --- | --- |
@@ -58,6 +58,16 @@ HTTP404・429・5xx・通信中断は待機期限内で再確認します。そ�
 `github-pages` environmentは文書配置job用で、npm公開jobの環境とは別です。npm trusted publishingにはnpm CLI11.5.1以降・Node22.14以降とGitHub-hosted runnerが必要です。本workflowはNode24のGitHub-hosted runnerを使用します。[npm trusted publishing公式手順](https://docs.npmjs.com/trusted-publishers/)
 
 2026-09-03以降に作成するtrusted publisherは、既定では `npm stage publish` が許可されます。このworkflowの直接公開には `npm publish` を別に許可する設定が必要です。stage-onlyの保護を使う方針なら、既存の設定を緩和せず、stagingと所有者の2FA承認を組み込むworkflow変更を先に行います。
+
+CLIでの設定にはnpm11.15以降、既存パッケージの書込権限、所有者の2FAが必要です。次はnpm11.19.0で確認した対象設定です。最初にdry-runで名前・repository・workflow・許可操作を確認し、その後に登録します。公開jobにenvironmentがないため `--environment` は指定しません。[npm trust公式仕様](https://docs.npmjs.com/cli/v11/commands/npm-trust/)
+
+```sh
+npm trust github @bright203/tadorino-sdk-js --file release.yml --repository vpwtuj/tadorino-sdk-js --allow-publish --dry-run
+npm trust github @bright203/tadorino-sdk-js --file release.yml --repository vpwtuj/tadorino-sdk-js --allow-publish --yes
+npm trust list @bright203/tadorino-sdk-js
+```
+
+`--allow-publish` は直接公開のために必須です。`--yes` はCLIの設定確認を省略するだけで、本人のMFAを代行・省略しません。表示された本人認証は所有者がブラウザで完了します。`list` にもMFAを求められる場合があります。自動でブラウザを開かず本人へ操作を引き継ぐ場合は、CLIへ `BROWSER=false` を前置できます。OTP・token・本人認証の一時URLをチャットやリポジトリへ保存しません。dry-runや本人認証待ちを設定完了と扱わず、登録成功と再取得した設定を確認します。
 
 設定の存在や `npm whoami` だけでtrusted publishing検証済みと報告せず、実際の新しい版のOIDC公開が成功した時点で確認します。
 
